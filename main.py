@@ -5,15 +5,15 @@ Source: https://github.com/python-telegram-bot/python-telegram-bot/blob/master/e
 import os
 import logging
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+PORT = int(os.environ.get('PORT', '8443'))
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 
 logger = logging.getLogger(__name__)
-BOT_TOKEN = "1543412340:AAERtfNbV182G6HvKM-u18JrbInbl0g33KQ"
-TOKEN = BOT_TOKEN
-PORT = int(os.environ.get('PORT', 5000))
+TOKEN = "1543412340:AAERtfNbV182G6HvKM-u18JrbInbl0g33KQ"
+
 # Define a few command handlers. These usually take the two arguments update and
 # context. Error handlers also receive the raised TelegramError object in error.
 def start(update, context):
@@ -56,7 +56,7 @@ def main():
     updater.start_webhook(listen="0.0.0.0",
                           port=int(PORT),
                           url_path=TOKEN)
-    updater.bot.setWebhook('https://yourherokuappname.herokuapp.com/' + TOKEN)
+    updater.bot.setWebhook('https://nuscanoeingbot.herokuapp.com/' + TOKEN)
 
     # Run the bot until you press Ctrl-C or the process receives SIGINT,
     # SIGTERM or SIGABRT. This should be used most of the time, since
