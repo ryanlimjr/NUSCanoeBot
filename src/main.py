@@ -4,7 +4,7 @@ Source: https://github.com/python-telegram-bot/python-telegram-bot/blob/master/e
 """
 import os
 import logging
-from Commands.Help import help
+from Commands.Help import *
 from constants import BOT_TOKEN
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 PORT = int(os.environ.get('PORT', '8443'))
@@ -22,7 +22,7 @@ def start(update, context):
 
 def help(update, context):
     """Send a message when the command /help is issued."""
-    update.message.reply_text(help())
+    update.message.reply_text(Help.Help())
 
 def echo(update, context):
     """Echo the user message."""
