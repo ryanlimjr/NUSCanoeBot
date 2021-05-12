@@ -22,7 +22,7 @@ def start(update, context):
 
 def help(update, context):
     """Send a message when the command /help is issued."""
-    update.message.reply_text(Help.Help())
+    update.message.reply_text(help())
 
 def echo(update, context):
     """Echo the user message."""
