@@ -4,14 +4,13 @@ Source: https://github.com/python-telegram-bot/python-telegram-bot/blob/master/e
 """
 import os
 import logging
+import Commands.Help as Help
 from constants import BOT_TOKEN
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 PORT = int(os.environ.get('PORT', '8443'))
 
 # Enable logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
-
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logging.INFO)
 logger = logging.getLogger(__name__)
 TOKEN = BOT_TOKEN
 
@@ -23,7 +22,7 @@ def start(update, context):
 
 def help(update, context):
     """Send a message when the command /help is issued."""
-    update.message.reply_text('Help!')
+    update.message.reply_text(Help.Help())
 
 def echo(update, context):
     """Echo the user message."""
@@ -58,10 +57,6 @@ def main():
                           port=int(PORT),
                           url_path=TOKEN)
     updater.bot.setWebhook('https://nuscanoeingbot.herokuapp.com/' + TOKEN)
-
-    # Run the bot until you press Ctrl-C or the process receives SIGINT,
-    # SIGTERM or SIGABRT. This should be used most of the time, since
-    # start_polling() is non-blocking and will stop the bot gracefully.
     updater.idle()
 
 if __name__ == '__main__':
