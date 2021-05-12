@@ -1,2 +1,2 @@
-def help():
+def execute():
     return 'help!'
