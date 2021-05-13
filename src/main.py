@@ -4,7 +4,7 @@ Source: https://github.com/python-telegram-bot/python-telegram-bot/blob/master/e
 """
 import os
 import logging
-import Commands.Help as HelpCommand
+from Commands.Help import HelpCommand
 from constants import BOT_TOKEN
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 PORT = int(os.environ.get('PORT', '8443'))
