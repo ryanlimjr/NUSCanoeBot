@@ -5,6 +5,7 @@ Source: https://github.com/python-telegram-bot/python-telegram-bot/blob/master/e
 import os
 import logging
 from Commands.Help import HelpCommand
+from Commands.GenerateQuote import GenerateQuoteCommand
 from constants import BOT_TOKEN
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 PORT = int(os.environ.get('PORT', '8443'))
@@ -41,6 +42,7 @@ def main():
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", HelpCommand.execute))
+    dp.add_handler(CommandHandler("getQuote", GenerateQuoteCommand.execute))
 
     # on noncommand i.e message - echo the message on Telegram
     dp.add_handler(MessageHandler(Filters.text, echo))
