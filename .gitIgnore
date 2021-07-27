@@ -1,2 +1,5 @@
+**/__pycache__/
+*.py[cod]
 .vscode/
-__pychache__/
+venv/
+.env
