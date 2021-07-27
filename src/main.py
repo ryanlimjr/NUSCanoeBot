@@ -28,6 +28,7 @@ def start(update, context):
 
 def echo(update, context):
     """Echo the user message."""
+    logger.info('echoing "%s"', update.message.text)
     update.message.reply_text(update.message.text)
 
 def error(update, context):
