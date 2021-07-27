@@ -13,7 +13,7 @@ from Commands.Help import HelpCommand
 
 load_dotenv()
 PORT = int(os.environ.get('PORT', '8443'))
-TOKEN = os.environ.get("BOT_TOKEN")
+TOKEN = str(os.environ.get("BOT_TOKEN"))
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logging.INFO)
@@ -58,9 +58,10 @@ def main():
 
     # Start the Bot
     updater.start_webhook(listen="0.0.0.0",
-                          port=int(PORT),
+                          port=PORT,
                           url_path=TOKEN,
                           webhook_url='https://yourherokuappname.herokuapp.com/' + TOKEN)
+    
     updater.idle()
 
 if __name__ == '__main__':
