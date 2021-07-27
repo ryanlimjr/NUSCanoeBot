@@ -6,7 +6,7 @@ class GenerateQuoteCommand:
     @staticmethod
     def parseResponse(response):
         quote = response.json()[0]
-        return quote['q'] + "\n - " + quote['a']
+        return quote['q'] + "\n\n - " + quote['a']
 
     @staticmethod
     def getQuote():
