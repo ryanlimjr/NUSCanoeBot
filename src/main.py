@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from Commands.GenerateQuote import GenerateQuoteCommand
 from Commands.Help import HelpCommand
 
-#load_dotenv()
+load_dotenv()
 PORT = int(os.environ.get('PORT', '8443'))
 TOKEN = os.environ.get("BOT_TOKEN")
 
@@ -58,7 +58,7 @@ def main():
 
     # Start the Bot
     updater.start_webhook(listen="0.0.0.0",
-                          port=8443,
+                          port=PORT,
                           url_path=TOKEN)
     updater.bot.setWebhook('https://nuscanoeingbot.herokuapp.com/' + TOKEN)
     updater.idle()
