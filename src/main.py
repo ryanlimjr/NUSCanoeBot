@@ -63,7 +63,7 @@ def main():
                           url_path=TOKEN,
                           webhook_url='https://yourherokuappname.herokuapp.com/' + TOKEN)
     
-    updater.idle()
+    ##updater.idle()
 
 if __name__ == '__main__':
     main()
