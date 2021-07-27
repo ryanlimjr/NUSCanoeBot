@@ -58,7 +58,7 @@ def main():
 
     # Start the Bot
     updater.start_webhook(listen="0.0.0.0",
-                          port=PORT,
+                          port=int(PORT),
                           url_path=TOKEN,
                           webhook_url='https://yourherokuappname.herokuapp.com/' + TOKEN)
     updater.idle()
