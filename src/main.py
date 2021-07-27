@@ -1,17 +1,16 @@
-"""
-Simple Bot to reply to Telegram messages taken from the python-telegram-bot examples.
-Source: https://github.com/python-telegram-bot/python-telegram-bot/blob/master/examples/echobot2.py
-"""
 import logging
 import os
 
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
 from dotenv import load_dotenv
 
-from Commands.GenerateQuote import GenerateQuoteCommand
-from Commands.Help import HelpCommand
+from Commands import GenerateQuoteCommand
+from Commands import HelpCommand
 
-#load_dotenv()
+
+"""uncomment this line if testing locally"""
+#load_dotenv() 
+
 PORT = int(os.environ.get('PORT', '8443'))
 TOKEN = str(os.environ.get("BOT_TOKEN"))
 
@@ -28,7 +27,6 @@ def start(update, context):
 
 def echo(update, context):
     """Echo the user message."""
-    logger.info('echoing "%s"', update.message.text)
     update.message.reply_text(update.message.text)
 
 def error(update, context):
@@ -39,8 +37,6 @@ def main():
 
     """Start the bot."""
     # Create the Updater and pass it your bot's token.
-    # Make sure to set use_context=True to use the new context based callbacks
-    # Post version 12 this will no longer be necessary
     updater = Updater(TOKEN)
 
     # Get the dispatcher to register handlers
@@ -65,5 +61,6 @@ def main():
     
     updater.idle()
 
+# Start the app
 if __name__ == '__main__':
     main()
