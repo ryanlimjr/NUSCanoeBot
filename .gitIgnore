@@ -1,4 +1,13 @@
+#ignore misc folders 
 __pycache__/
+
+#ignore misc files
+__init__.py
+
+#ide settings and virtual environment configs
 .vscode/
 venv/
+
+# api keys
 .env
+nuscanoebot-766aab32bb71.json
