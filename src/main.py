@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from Commands.GenerateQuote import GenerateQuoteCommand
 from Commands.Help import HelpCommand
 
-load_dotenv()
+#load_dotenv()
 PORT = int(os.environ.get('PORT', '8443'))
 TOKEN = str(os.environ.get("BOT_TOKEN"))
 
