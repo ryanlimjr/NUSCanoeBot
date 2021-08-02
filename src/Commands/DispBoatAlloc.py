@@ -16,15 +16,17 @@ from telegram.ext import CallbackContext
 
 """uncomment this when testing locally"""
 # load_dotenv()
+# creds = ServiceAccountCredentials.from_json_keyfile_dict(GOOGLE_CREDS, scope)
+# GOOGLE_CREDS=json.loads(os.environ.get("GOOGLE_CREDS"))
 # use creds to create a client to interact with the Google Drive API
 
 HCTI_API_ENDPOINT = "https://hcti.io/v1/image"
 HCTI_API_USER_ID = str(os.environ.get("HCTI_USER_ID"))
 HCTI_API_KEY = str(os.environ.get("HCTI_API_KEY"))
-GOOGLE_CREDS=json.loads(os.environ.get("GOOGLE_CREDS"))
+GOOGLE_CREDS=os.environ.get("GOOGLE_CREDS")
 SHEET_NAME=str(os.environ.get("SHEET_NAME"))
 scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
-creds = ServiceAccountCredentials.from_json_keyfile_dict(GOOGLE_CREDS, scope)
+creds = ServiceAccountCredentials.from_json(GOOGLE_CREDS)
 client = gspread.authorize(creds)
 sheet = client.open('telegram bot testing')
 class DispBoatAllocCommand:
