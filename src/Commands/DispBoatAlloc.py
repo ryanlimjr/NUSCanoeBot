@@ -26,7 +26,7 @@ HCTI_API_KEY = str(os.environ.get("HCTI_API_KEY"))
 GOOGLE_CREDS=os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
 SHEET_NAME=str(os.environ.get("SHEET_NAME"))
 scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
-creds = ServiceAccountCredentials.from_json(GOOGLE_CREDS)
+creds = ServiceAccountCredentials.from_json_keyfile_name(GOOGLE_CREDS)
 client = gspread.authorize(creds)
 sheet = client.open('telegram bot testing')
 class DispBoatAllocCommand:
