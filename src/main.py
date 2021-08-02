@@ -5,6 +5,7 @@ from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
 from dotenv import load_dotenv
 
 from Commands import GenerateQuoteCommand
+from Commands import DispBoatAllocCommand
 from Commands import HelpCommand
 
 
@@ -46,7 +47,7 @@ def main():
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", HelpCommand.execute))
     dp.add_handler(CommandHandler("getQuote", GenerateQuoteCommand.execute))
-
+    dp.add_handler(CommandHandler("getBoatAllocation", DispBoatAllocCommand.execute))
     # on noncommand i.e message - echo the message on Telegram
     dp.add_handler(MessageHandler(Filters.text, echo))
 

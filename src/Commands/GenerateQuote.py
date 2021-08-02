@@ -6,8 +6,6 @@ from requests import Response
 from requests.exceptions import RequestException
 from telegram import Update
 from telegram.ext import CallbackContext
-
-
 class GenerateQuoteCommand:
     # ERROR_GEN_QUOTE = "There was an error generating the quote."
     # ERROR_PARSE_RESPONSE = "There was an error parsing the response."
@@ -50,3 +48,4 @@ class GenerateQuoteCommand:
         Sends response back to telegram user
         """
         update.message.reply_text(GenerateQuoteCommand.getQuote())
+
