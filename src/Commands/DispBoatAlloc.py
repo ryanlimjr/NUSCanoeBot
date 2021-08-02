@@ -23,7 +23,7 @@ from telegram.ext import CallbackContext
 HCTI_API_ENDPOINT = "https://hcti.io/v1/image"
 HCTI_API_USER_ID = str(os.environ.get("HCTI_USER_ID"))
 HCTI_API_KEY = str(os.environ.get("HCTI_API_KEY"))
-GOOGLE_CREDS=os.environ.get("GOOGLE_CREDS")
+GOOGLE_CREDS=os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
 SHEET_NAME=str(os.environ.get("SHEET_NAME"))
 scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
 creds = ServiceAccountCredentials.from_json(GOOGLE_CREDS)
