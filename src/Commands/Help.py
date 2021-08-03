@@ -1,3 +1,4 @@
+from constants import HELP_MESSAGE
 class HelpCommand:
 
     @staticmethod
