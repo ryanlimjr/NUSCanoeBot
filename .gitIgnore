@@ -10,4 +10,4 @@ venv/
 
 # api keys
 .env
-nuscanoebot-766aab32bb71.json
+google-credentials.json
