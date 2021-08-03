@@ -16,19 +16,18 @@ from telegram.ext import CallbackContext
 
 """uncomment this when testing locally"""
 # load_dotenv()
-# creds = ServiceAccountCredentials.from_json_keyfile_dict(GOOGLE_CREDS, scope)
-# GOOGLE_CREDS=json.loads(os.environ.get("GOOGLE_CREDS"))
-# use creds to create a client to interact with the Google Drive API
 
 HCTI_API_ENDPOINT = "https://hcti.io/v1/image"
 HCTI_API_USER_ID = str(os.environ.get("HCTI_USER_ID"))
 HCTI_API_KEY = str(os.environ.get("HCTI_API_KEY"))
+
 GOOGLE_CREDS=os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
 SHEET_NAME=str(os.environ.get("SHEET_NAME"))
 scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
 creds = ServiceAccountCredentials.from_json_keyfile_name(GOOGLE_CREDS)
 client = gspread.authorize(creds)
-sheet = client.open('telegram bot testing')
+sheet = client.open(SHEET_NAME)
+
 class DispBoatAllocCommand:
 
     @staticmethod
@@ -48,7 +47,15 @@ class DispBoatAllocCommand:
         return worksheetName
 
     @staticmethod
-    def columnString(n):
+    def columnString(n:int) -> str:
+        """Converts the column number into A1 notation
+
+        Args:
+            n (int): Column Number
+
+        Returns:
+            str: Column in A1 notation
+        """
         string = ""
         while n > 0:
             n, remainder = divmod(n - 1, 26)
@@ -75,6 +82,14 @@ class DispBoatAllocCommand:
 
     @staticmethod
     def parseBoatRawAllocationIntoHTML(rawBoatAllocation: List[List[str]]) -> str:
+        """converts the boat allocation into HTML table format using pandas package
+
+        Args:
+            rawBoatAllocation (List[List[str]]): boat allocation in 2D list
+
+        Returns:
+            str: HTML table of boat allocation
+        """
         boatAllocationFiltered = list(filter(lambda x : x, rawBoatAllocation))
         boatAllocationNoRemarks = list(map(lambda x : [x[0],x[2]], boatAllocationFiltered))
         dataframe = pd.DataFrame(boatAllocationNoRemarks[1:], columns=boatAllocationNoRemarks[0])
@@ -83,18 +98,42 @@ class DispBoatAllocCommand:
 
     @staticmethod
     def parseHTMLIntoImage(html: str) -> str:
+        """converts HTML table into image URL usint HCTI api (https://htmlcsstoimage.com/)
+
+        Args:
+            html (str): HTML table in string format
+
+        Returns:
+            str: image URL 
+        """
         data = {'html': html}
         image = requests.post(url = HCTI_API_ENDPOINT, data = data, auth=(HCTI_API_USER_ID, HCTI_API_KEY))
         return image.json()['url']
 
     @staticmethod
     def parseBoatAllocation(rawBoatAllocation: List[List[str]]) -> str:
+        """converts boat allocation from 2D list of string into an image 
+
+        Args:
+            rawBoatAllocation (List[List[str]]): boat allocation in 2D list
+
+        Returns:
+            str: image URL
+        """
         html = DispBoatAllocCommand.parseBoatRawAllocationIntoHTML(rawBoatAllocation)
         image = DispBoatAllocCommand.parseHTMLIntoImage(html)
         return image
 
     @staticmethod
     def getBoatAllocation(today: date) -> str:
+        """Get today's Boat allocation 
+
+        Args:
+            today (date): date object for today
+
+        Returns:
+            str: image URL of boat allocation table
+        """
         worksheet = sheet.worksheet(DispBoatAllocCommand.getWorksheetName(today))
         listOfdates = worksheet.range(DATE_CELL_RANGE)
         targetRange = DispBoatAllocCommand.getTargetRangeFromDates(listOfdates, today.strftime('%d/%m/%Y'))
@@ -104,7 +143,7 @@ class DispBoatAllocCommand:
     @staticmethod
     def execute(update: Update, context: CallbackContext) -> None:
         """
-        Sends response back to telegram user
+        Sends image back to telegram user
         """
         update.message.reply_photo(DispBoatAllocCommand.getBoatAllocation(date.today()))
 
