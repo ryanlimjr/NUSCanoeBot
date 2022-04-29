@@ -1,65 +1,53 @@
 import logging
 import os
-
-from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
+from telegram.ext import CommandHandler, Updater
 from dotenv import load_dotenv
 
-from Commands import GenerateQuoteCommand
-from Commands import DispBoatAllocCommand
-from Commands import HelpCommand
+from GenerateQuote import GenerateQuoteCommand
+from Help import HelpCommand
+from DispBoatAlloc import DispBoatAllocCommand
+from getMontlyAttendance import GetMonthlyAttendanceCommand
 
-
-"""uncomment this line if testing locally"""
-#load_dotenv() 
-
+#load_dotenv()
 PORT = int(os.environ.get('PORT', '8443'))
 TOKEN = str(os.environ.get("BOT_TOKEN"))
 
-# Enable logging
+####################################
+#                           Logger setup                          #
+####################################
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-
-# Define a few command handlers. These usually take the two arguments update and
-# context. Error handlers also receive the raised TelegramError object in error.
-def start(update, context):
-    """Send a message when the command /start is issued."""
-    update.message.reply_text('Hi!')
-
-def echo(update, context):
-    """Echo the user message."""
-    update.message.reply_text(update.message.text)
-
 def error(update, context):
-    """Log Errors caused by Updates."""
     logger.warning('Update "%s" caused error "%s"', update, context.error)
 
 def main():
 
-    """Start the bot."""
-    # Create the Updater and pass it your bot's token.
+    ####################################
+    #                          Bot Initialization                     #
+    ####################################
     updater = Updater(TOKEN)
+    dispatcher = updater.dispatcher
 
-    # Get the dispatcher to register handlers
-    dp = updater.dispatcher
+    dispatcher.add_handler(CommandHandler("help", HelpCommand.execute))
+    dispatcher.add_handler(CommandHandler("getQuote", GenerateQuoteCommand.execute))
+    dispatcher.add_handler(CommandHandler("getBoatAllocation", DispBoatAllocCommand.execute))
+    dispatcher.add_handler(CommandHandler("getAttendance", GetMonthlyAttendanceCommand.execute))
+    ####################################
+    #                      Logger initialization                    #
+    ####################################
+    dispatcher.add_error_handler(error)
 
-    # on different commands - answer in Telegram
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("help", HelpCommand.execute))
-    dp.add_handler(CommandHandler("getQuote", GenerateQuoteCommand.execute))
-    dp.add_handler(CommandHandler("getBoatAllocation", DispBoatAllocCommand.execute))
-    # on noncommand i.e message - echo the message on Telegram
-    dp.add_handler(MessageHandler(Filters.text, echo))
-
-    # log all errors
-    dp.add_error_handler(error)
-
-    # Start the Bot
+    ####################################
+    #                               Run bot                              #
+    ####################################
+    # Local testing #
+    #updater.start_polling()
+    # production #
     updater.start_webhook(listen="0.0.0.0",
                           port=PORT,
                           url_path=TOKEN,
                           webhook_url='https://nuscanoeingbot.herokuapp.com/' + TOKEN)
-    
+
     updater.idle()
 
 # Start the app

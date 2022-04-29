@@ -3,6 +3,8 @@ __pycache__/
 
 #ignore misc files
 __init__.py
+PythonTidy-1.22.python.py
+.pylintrc
 
 #ide settings and virtual environment configs
 .vscode/
