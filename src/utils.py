@@ -33,7 +33,7 @@ def getWeek(day:date ) -> str:
     """
     startOfWeek = day - timedelta(days=getDayInt(day))
     endOfWeek = startOfWeek + timedelta(days=6)
-    Week = startOfWeek.strftime('%b %-d/%-m') + " - " + endOfWeek.strftime('%b %-d/%-m')
+    Week = startOfWeek.strftime('%b %02d/%02m') + " - " + endOfWeek.strftime('%b %02d/%02m')
     return Week
 
 def getCurrentWeek() -> str:
