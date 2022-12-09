@@ -2,7 +2,7 @@ APScheduler==3.6.3
 astroid==2.11.3
 attrs==21.2.0
 cachetools==4.2.2
-certifi==2021.5.30
+certifi==2022.12.7
 charset-normalizer==2.0.3
 df2gspread==1.0.4
 dill==0.3.4
