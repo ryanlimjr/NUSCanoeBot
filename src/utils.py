@@ -56,9 +56,10 @@ def getAllWeeksInPrevMonth() -> list:
     first = today.replace(day=1)
     lastMonth = first - timedelta(days=1)
     lastMonthInt = lastMonth.month
+    year = today.year if lastMonthInt != 12 else (today.year - 1)
     for i in range(1,32):
         try :
-            day = today.replace(month=lastMonthInt, day=i)
+            day = today.replace(year=year, month=lastMonthInt, day=i)
         except ValueError:
             break
         week = getWeek(day)
