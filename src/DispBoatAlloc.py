@@ -1,4 +1,5 @@
 import os
+import json
 from dotenv import load_dotenv
 from telegram import Update,ParseMode
 from telegram.ext import CallbackContext
@@ -13,9 +14,9 @@ from constants import DATE_CELL_RANGE
 #load_dotenv()
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-SERVICE_ACCOUNT_FILE = str(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"))
+SERVICE_ACCOUNT_CREDS= json.loads(str(os.environ.get("GOOGLE_CREDENTIALS")))
 SPREAD_SHEET_ID = str(os.environ.get("SHEET_ID"))
-CREDS = service_account.Credentials.from_service_account_file( SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+CREDS = service_account.Credentials.from_service_account_info( SERVICE_ACCOUNT_CREDS, scopes=SCOPES)
 SERVICE = build('sheets', 'v4', credentials=CREDS)
 SHEET = SERVICE.spreadsheets()
 

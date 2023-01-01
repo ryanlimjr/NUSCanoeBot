@@ -1,4 +1,5 @@
 import os
+import json
 from dotenv import load_dotenv
 from pkg_resources import FileMetadata
 from telegram import Update,ParseMode
@@ -15,10 +16,10 @@ from constants import DATE_CELL_RANGE_ATTENDANCE_MORN, DATE_CELL_RANGE_ATTENDANC
 #load_dotenv()
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
-SERVICE_ACCOUNT_FILE = str(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"))
+SERVICE_ACCOUNT_CREDS = json.loads(str(os.environ.get("GOOGLE_CREDENTIALS")))
 SPREAD_SHEET_ID = str(os.environ.get("SHEET_ID"))
 FOLDER_ID = str(os.environ.get("FOLDER_ID"))
-CREDS = service_account.Credentials.from_service_account_file( SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+CREDS = service_account.Credentials.from_service_account_info( SERVICE_ACCOUNT_CREDS scopes=SCOPES)
 SERVICE_SHEETS = build('sheets', 'v4', credentials=CREDS)
 DRIVE = build('drive', 'v3', credentials=CREDS)
 SHEET = SERVICE_SHEETS.spreadsheets()
