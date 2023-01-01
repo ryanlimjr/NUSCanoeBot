@@ -11,7 +11,7 @@ import utils
 from constants import DATE_CELL_RANGE
 
 """uncomment this when testing locally"""
-#load_dotenv()
+load_dotenv()
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 SERVICE_ACCOUNT_CREDS= json.loads(str(os.environ.get("GOOGLE_CREDENTIALS")))
