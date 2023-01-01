@@ -13,7 +13,7 @@ import utils
 from constants import DATE_CELL_RANGE_ATTENDANCE_MORN, DATE_CELL_RANGE_ATTENDANCE_NOON
 
 """uncomment this when testing locally"""
-load_dotenv()
+#load_dotenv()
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
 SERVICE_ACCOUNT_CREDS = json.loads(str(os.environ.get("GOOGLE_CREDENTIALS")))
