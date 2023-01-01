@@ -43,10 +43,11 @@ def main():
     # Local testing #
     #updater.start_polling()
     # production #
+    updater.
     updater.start_webhook(listen="0.0.0.0",
                           port=PORT,
                           url_path=TOKEN,
-                          webhook_url='https://nuscanoeingbot.herokuapp.com/' + TOKEN)
+                          webhook_url='https://nuscanoebot-production.up.railway.app/' + TOKEN)
 
     updater.idle()
 
