@@ -43,7 +43,6 @@ def main():
     # Local testing #
     #updater.start_polling()
     # production #
-    updater.
     updater.start_webhook(listen="0.0.0.0",
                           port=PORT,
                           url_path=TOKEN,
