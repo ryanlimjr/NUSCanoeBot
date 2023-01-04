@@ -33,9 +33,6 @@ export class Sheet {
   }
 
   /**
-   * Takes in a sheet in ROW major setting. This means that `sheets[0]`
-   * refers to the first row, and `sheets[0][0]` refers to the cell A1.
-   *
    * This function assumes that the first row is the header row, and
    * that its values are space-separated.
    */

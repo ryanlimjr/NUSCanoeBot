@@ -13,6 +13,8 @@ async function main() {
   const trainings = attendanceSheet.getTrainingCoordinates()
   console.log(trainings)
   console.log(attendanceSheet.rows, attendanceSheet.cols)
+  await sheets.addSheetToFront("FRESHIE", 10, 10)
+  sheets.addSheetToFront
 }
 
 main()

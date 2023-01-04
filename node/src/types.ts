@@ -31,8 +31,8 @@ export type CellRange = {
   x1: number
   /** right-most column */
   x2: number
-  /** right-most row */
-  y1: number
   /** left-most row */
+  y1: number
+  /** right-most row */
   y2: number
 }
