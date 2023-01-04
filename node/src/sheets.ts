@@ -38,6 +38,17 @@ export class Sheets {
   }
 
   /**
+   * List all sheets under the spreadsheet of ID `this.spreadsheetId`
+   */
+  async listSheets() {
+    return this.core.spreadsheets
+      .get({
+        spreadsheetId: this.spreadsheetId,
+      })
+      .then((s) => s.data.sheets || [])
+  }
+
+  /**
    * Fetch data of one sheet, with an optional range.
    * If no range is provided, then fetch the entire sheet.
    *
@@ -74,12 +85,10 @@ export class Sheets {
   /**
    * Obtains the sheet ID of a sheet by its title.
    */
-  private getSheetIdByTitle(
-    sheets: sheets_v4.Schema$Sheet[],
-    title: string
-  ): number | undefined {
+  private getSheetId(sheets: sheets_v4.Schema$Sheet[], title: string): number {
     const sheet = sheets.find((sheet) => sheet.properties?.title === title)
-    if (!sheet || !sheet.properties || !sheet.properties.sheetId) return
+    if (!sheet || !sheet.properties || !sheet.properties.sheetId)
+      throw new Error(`Sheet not found: ${title}`)
     return sheet.properties.sheetId
   }
 
@@ -109,7 +118,7 @@ export class Sheets {
               return reject('Spreadsheet not updated. No sheet created.')
             if (!spreadsheet.sheets)
               return reject('No sheets found or created.')
-            const sheetId = this.getSheetIdByTitle(spreadsheet.sheets, title)
+            const sheetId = this.getSheetId(spreadsheet.sheets, title)
             if (!sheetId) return reject(`Sheet ${title} has no ID.`)
             return resolve(sheetId)
           })
@@ -124,5 +133,72 @@ export class Sheets {
     return this.addSheet(title, rowCount, columnCount).then((sheetId) =>
       this.moveSheet(sheetId, 1)
     )
+  }
+
+  /**
+   * Gets a raw sheet.
+   */
+  async getSheetRaw(title: string, range?: string) {
+    return this.core.spreadsheets.values.get({
+      spreadsheetId: this.spreadsheetId,
+      range: range ? `${title}!${range}` : title,
+      valueRenderOption: 'UNFORMATTED_VALUE',
+      dateTimeRenderOption: 'SERIAL_NUMBER',
+    })
+  }
+
+  /**
+   * Appends a row to an existing sheet. This assumes that the sheet
+   * has a header row, which it will use as keys to map the data into.
+   */
+  async appendRow(title: string, data: Record<string, string>) {
+    return this.getSheetRaw(title)
+      .then((raw) => {
+        const sheet = new Sheet(raw.data.values || [])
+        const headers = sheet.getHeaders()
+        const newRow = headers.map((key) => data[key])
+        const newData = [newRow] // a 2-d sheet slice with one row
+        return newData
+      })
+      .then((values) =>
+        this.core.spreadsheets.values.append({
+          spreadsheetId: this.spreadsheetId,
+          valueInputOption: 'RAW',
+          range: title,
+          requestBody: { majorDimension: 'ROWS', values },
+        })
+      )
+  }
+
+  /**
+   * Sets the header of a sheet.
+   */
+  async setHeader(title: string, headers: string[]) {
+    return this.core.spreadsheets.values.update({
+      spreadsheetId: this.spreadsheetId,
+      valueInputOption: 'RAW',
+      range: title,
+      requestBody: { majorDimension: 'ROWS', values: [headers] },
+    })
+  }
+
+  /**
+   * Deletes one sheet but its id.
+   */
+  async deleteSheetById(sheetId: number) {
+    return this.core.spreadsheets.batchUpdate({
+      spreadsheetId: this.spreadsheetId,
+      resource: { requests: [{ deleteSheet: { sheetId } }] },
+    } as sheets_v4.Params$Resource$Spreadsheets$Batchupdate)
+  }
+
+  /**
+   * Deletes one sheet by its title.
+   */
+  async deleteSheet(title: string) {
+    return this.listSheets()
+      .then((sheets) => this.getSheetId(sheets, title))
+      .then((sheetId) => this.deleteSheetById(sheetId))
+      .catch((err) => console.log(`[DELETE SHEET]: ${err}`))
   }
 }

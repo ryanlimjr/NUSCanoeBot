@@ -37,20 +37,28 @@ export class Sheet {
    * that its values are space-separated.
    */
   toRecord(): Record<string, string>[] {
-    const firstRow: string[] = this.data[0]
-    if (firstRow == undefined) return []
-    else if (firstRow.some((v) => typeof v !== 'string')) {
-      throw new Error('Header contains non-string elements.')
-    }
-    const header = firstRow.map(camelCaseify)
+    const headers = this.getHeaders()
     return this.data
       .slice(1)
       .map((line) =>
         line.reduce(
-          (a, value, col) => ((a[header[col]] = value), a),
+          (a, value, col) => ((a[headers[col]] = value), a),
           {} as Record<string, string>
         )
       )
+  }
+
+  /**
+   * Use the first row as a header row, and camelCaseify every entry
+   * as a form of normalization.
+   */
+  getHeaders(): string[] {
+    const firstRow: string[] = this.data[0]
+    if (firstRow == undefined) return []
+    if (firstRow.some((v) => typeof v !== 'string')) {
+      throw new Error('Header contains non-string elements.')
+    }
+    return firstRow.map(camelCaseify)
   }
 
   /**
