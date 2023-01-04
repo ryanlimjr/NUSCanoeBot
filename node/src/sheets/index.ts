@@ -1,6 +1,7 @@
 import { sheets, auth, sheets_v4 } from '@googleapis/sheets'
 import { join } from 'path'
 import { Sheet } from '../sheet'
+import { CellRange, daysOfWeek } from '../types'
 import { SheetsById } from './id-operations'
 
 const CREDENTIALS_PATH = join(process.cwd(), 'google-credentials.json')
@@ -198,16 +199,73 @@ export class Sheets extends SheetsById {
   }
 
   async __createAttendance__(title: string) {
-    const properties = {
-      title,
-      gridProperties: { rowCount: 100, columnCount: 21 },
-    }
-    return this.core.spreadsheets.batchUpdate({
-      spreadsheetId: this.spreadsheetId,
-      resource: {
-        requests: [{ addSheet: { properties } }],
-        includeSpreadsheetInResponse: true,
-      },
-    } as sheets_v4.Params$Resource$Spreadsheets$Batchupdate)
+    const values = Array.apply(null, Array(100)).map(() => Array(21).fill(''))
+    const merges: CellRange[] = []
+    const row = { AM: 10, PM: 50 }
+    daysOfWeek.forEach((day, idx) => {
+      const x = idx * 3
+      values[row.AM][x] = `${day.toUpperCase()} (AM)`
+      merges.push({ x1: x, x2: x + 3, y1: row.AM, y2: row.AM + 1 })
+      if (!(day === 'Saturday' || day === 'Sunday')) {
+        values[row.PM][x] = `${day.toUpperCase()} (PM)`
+        merges.push({ x1: x, x2: x + 3, y1: row.PM, y2: row.PM + 1 })
+      }
+    })
+
+    return this.addSheet(title, 100, 21)
+      .then((sheetId) =>
+        this.core.spreadsheets.values
+          .update({
+            spreadsheetId: this.spreadsheetId,
+            range: title,
+            valueInputOption: 'RAW',
+            requestBody: { values },
+          })
+          .then(() => sheetId)
+      )
+      .then((sheetId) =>
+        this.core.spreadsheets.batchUpdate({
+          spreadsheetId: this.spreadsheetId,
+          resource: {
+            requests: [
+              ...merges.map((range) => ({
+                mergeCells: {
+                  range: {
+                    sheetId,
+                    startRowIndex: range.y1,
+                    endRowIndex: range.y2,
+                    startColumnIndex: range.x1,
+                    endColumnIndex: range.x2,
+                  },
+                },
+              })),
+              {
+                repeatCell: {
+                  range: { sheetId, startRowIndex: 10, endRowIndex: 11 },
+                  cell: {
+                    userEnteredFormat: {
+                      horizontalAlignment: 'CENTER',
+                      textFormat: { bold: true },
+                    },
+                  },
+                  fields: 'userEnteredFormat(textFormat,horizontalAlignment)',
+                },
+              },
+              {
+                repeatCell: {
+                  range: { sheetId, startRowIndex: 50, endRowIndex: 51 },
+                  cell: {
+                    userEnteredFormat: {
+                      horizontalAlignment: 'CENTER',
+                      textFormat: { bold: true },
+                    },
+                  },
+                  fields: 'userEnteredFormat(textFormat,horizontalAlignment)',
+                },
+              },
+            ],
+          },
+        } as sheets_v4.Params$Resource$Spreadsheets$Batchupdate)
+      )
   }
 }

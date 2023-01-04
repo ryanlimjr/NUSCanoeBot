@@ -1,5 +1,4 @@
-import { AttendanceSheet } from './sheet/attendance'
-import { TeamDataSheet } from './sheet/team-data'
+import { TeamDataSheet, AttendanceSheet } from './sheet'
 import { Sheets } from './sheets'
 
 export async function initializeUserDatabase(sheets: Sheets) {
