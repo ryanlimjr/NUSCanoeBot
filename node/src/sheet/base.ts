@@ -1,7 +1,7 @@
-import { Training, CellRange, AttendanceEntry, validate } from './types'
-import { range } from './array'
-import { camelCaseify, isTrainingDay, parseTrainingDay } from './string'
-import { parseTrainingHeader } from './parse'
+import { Training, CellRange, AttendanceEntry, validate } from 'src/types'
+import { range } from 'src/array'
+import { camelCaseify, isTrainingDay, parseTrainingDay } from 'src/string'
+import { parseTrainingHeader } from 'src/parse'
 
 /**
  * Get number of rows and columns in a ROW major sheet

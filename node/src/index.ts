@@ -47,7 +47,7 @@ async function main() {
   const attendanceSheet = await sheets.getSheet('Dec 26/12 - Jan 01/01')
   const attendanceData = attendanceSheet.getTrainingAttendance(nicknames)
   await sheets.appendRows('training-database', attendanceData)
-  await sheets.setDateColumn('training-database', 0).then(console.log)
+  await sheets.setDateColumn('training-database', 0)
   console.log('DONE')
 }
 
