@@ -1,3 +1,5 @@
+import { AttendanceSheet } from './sheet/attendance'
+import { TeamDataSheet } from './sheet/team-data'
 import { Sheets } from './sheets'
 
 export async function initializeUserDatabase(sheets: Sheets) {
@@ -29,23 +31,17 @@ export async function initializeTrainingDatabase(sheets: Sheets) {
   await sheets.setHeader(sheetTitle, headers)
 }
 
-export async function getNicknames(
-  sheets: Sheets
-): Promise<Record<string, string>> {
-  return sheets.getSheet('Nicknames').then((sheet) => {
-    const nicknames = {} as Record<string, string>
-    sheet.toRecord().forEach((v) => (nicknames[v['nickname']] = v['fullName']))
-    return nicknames
-  })
-}
-
 async function main() {
   console.log('START')
   const sheets = await Sheets.init()
   await initializeTrainingDatabase(sheets)
-  const nicknames = await getNicknames(sheets)
-  const attendanceSheet = await sheets.getSheet('Dec 26/12 - Jan 01/01')
-  const attendanceData = attendanceSheet.getTrainingAttendance(nicknames)
+  const teamData = await sheets.getSheet('Team Data', TeamDataSheet)
+  const nicknames = teamData.getNicknames()
+  const attendanceSheet = await sheets.getSheet(
+    'Dec 26/12 - Jan 01/01',
+    AttendanceSheet
+  )
+  const attendanceData = attendanceSheet.getAttendance(nicknames)
   await sheets.appendRows('training-database', attendanceData)
   await sheets.setDateColumn('training-database', 0)
   console.log('DONE')

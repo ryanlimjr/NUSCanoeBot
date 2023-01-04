@@ -55,14 +55,18 @@ export class Sheets {
    * @param name the name of one sheet within the entire spreadsheet
    * @param range the range of cells to take (e.g. `A2:F9`)
    */
-  async getSheet(name: string, range?: string): Promise<Sheet> {
+  async getSheet<T extends Sheet>(
+    name: string,
+    sheetClass: new (data: any[][]) => T,
+    range?: string
+  ): Promise<T> {
     const res = this.core.spreadsheets.values.get({
       spreadsheetId: this.spreadsheetId,
       range: range ? `${name}!${range}` : name,
       valueRenderOption: 'UNFORMATTED_VALUE',
       dateTimeRenderOption: 'SERIAL_NUMBER',
     })
-    return res.then((res) => new Sheet(res.data.values || []))
+    return res.then((res) => new sheetClass(res.data.values || []))
   }
 
   /**
