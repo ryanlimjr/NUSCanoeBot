@@ -212,6 +212,20 @@ export class Sheets extends SheetsById {
       }
     })
 
+    const boldAndCenter = (sheetId: number, rows: number[]) =>
+      rows.map((row) => ({
+        repeatCell: {
+          range: { sheetId, startRowIndex: row, endRowIndex: row + 1 },
+          cell: {
+            userEnteredFormat: {
+              horizontalAlignment: 'CENTER',
+              textFormat: { bold: true },
+            },
+          },
+          fields: 'userEnteredFormat(textFormat,horizontalAlignment)',
+        },
+      }))
+
     return this.addSheet(title, 100, 21)
       .then((sheetId) =>
         this.core.spreadsheets.values
@@ -239,30 +253,7 @@ export class Sheets extends SheetsById {
                   },
                 },
               })),
-              {
-                repeatCell: {
-                  range: { sheetId, startRowIndex: 10, endRowIndex: 11 },
-                  cell: {
-                    userEnteredFormat: {
-                      horizontalAlignment: 'CENTER',
-                      textFormat: { bold: true },
-                    },
-                  },
-                  fields: 'userEnteredFormat(textFormat,horizontalAlignment)',
-                },
-              },
-              {
-                repeatCell: {
-                  range: { sheetId, startRowIndex: 50, endRowIndex: 51 },
-                  cell: {
-                    userEnteredFormat: {
-                      horizontalAlignment: 'CENTER',
-                      textFormat: { bold: true },
-                    },
-                  },
-                  fields: 'userEnteredFormat(textFormat,horizontalAlignment)',
-                },
-              },
+              ...boldAndCenter(sheetId, [row.AM, row.PM]),
             ],
           },
         } as sheets_v4.Params$Resource$Spreadsheets$Batchupdate)
