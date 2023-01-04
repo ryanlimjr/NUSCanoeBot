@@ -1,7 +1,7 @@
 import { TeamDataSheet, AttendanceSheet } from './sheet'
-import { Sheets } from './sheets'
+import { Spreadsheet } from './spreadsheet'
 
-export async function initializeUserDatabase(sheets: Sheets) {
+export async function initializeUserDatabase(sheets: Spreadsheet) {
   const sheetTitle = 'user-database'
   const headers = ['Nickname', 'Full Name', 'Birthday']
   await sheets.deleteSheet(sheetTitle)
@@ -15,7 +15,7 @@ export async function initializeUserDatabase(sheets: Sheets) {
   ])
 }
 
-export async function initializeTrainingDatabase(sheets: Sheets) {
+export async function initializeTrainingDatabase(sheets: Spreadsheet) {
   const sheetTitle = 'training-database'
   const headers = [
     'Date',
@@ -30,7 +30,7 @@ export async function initializeTrainingDatabase(sheets: Sheets) {
   await sheets.setHeaders(sheetTitle, headers)
 }
 
-export async function demo(sheets: Sheets) {
+export async function demo(sheets: Spreadsheet) {
   console.log('start demo...')
   await initializeTrainingDatabase(sheets)
   const teamData = await sheets.getSheet('Team Data', TeamDataSheet)
@@ -47,7 +47,7 @@ export async function demo(sheets: Sheets) {
 
 async function main() {
   console.log('START')
-  const sheets = await Sheets.init()
+  const sheets = await Spreadsheet.init()
   await sheets
     .deleteSheet('__weekly__')
     .then(() => sheets.__createAttendance__('__weekly__'))

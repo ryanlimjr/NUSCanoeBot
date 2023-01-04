@@ -2,14 +2,14 @@ import { sheets, auth, sheets_v4 } from '@googleapis/sheets'
 import { join } from 'path'
 import { Sheet } from '../sheet'
 import { CellRange, daysOfWeek } from '../types'
-import { SheetsById } from './id-operations'
+import { SpreadsheetById } from './id-operations'
 
 const CREDENTIALS_PATH = join(process.cwd(), 'google-credentials.json')
 const SPREADSHEET_IDS = {
   main: '1W_mRwNhylC41bY6Hn5hmeRgUVpAdugsjHEwmoFtd2PM',
 }
 
-export class Sheets extends SheetsById {
+export class Spreadsheet extends SpreadsheetById {
   /**
    * Initialize a new Sheets instance
    */
@@ -24,7 +24,10 @@ export class Sheets extends SheetsById {
    * @param keyFile Path to a .json, .pem, or .p12 key file
    * @param spreadsheetId ID of the main spreadsheet
    */
-  static async init(keyFile?: string, spreadsheetId?: string): Promise<Sheets> {
+  static async init(
+    keyFile?: string,
+    spreadsheetId?: string
+  ): Promise<Spreadsheet> {
     // fill in default values
     keyFile = keyFile ? keyFile : CREDENTIALS_PATH
     const id = spreadsheetId ? spreadsheetId : SPREADSHEET_IDS.main
@@ -32,7 +35,7 @@ export class Sheets extends SheetsById {
     const scopes = ['https://www.googleapis.com/auth/spreadsheets']
     const getClient = auth.getClient({ keyFile, scopes })
     const core = getClient.then((auth) => sheets({ version: 'v4', auth }))
-    return core.then((core) => new Sheets(core, id))
+    return core.then((core) => new Spreadsheet(core, id))
   }
 
   /**
@@ -202,15 +205,17 @@ export class Sheets extends SheetsById {
     const values = Array.apply(null, Array(100)).map(() => Array(21).fill(''))
     const merges: CellRange[] = []
     const row = { AM: 10, PM: 50 }
-    daysOfWeek.forEach((day, idx) => {
-      const x = idx * 3
-      values[row.AM][x] = `${day.toUpperCase()} (AM)`
-      merges.push({ x1: x, x2: x + 3, y1: row.AM, y2: row.AM + 1 })
-      if (!(day === 'Saturday' || day === 'Sunday')) {
-        values[row.PM][x] = `${day.toUpperCase()} (PM)`
-        merges.push({ x1: x, x2: x + 3, y1: row.PM, y2: row.PM + 1 })
-      }
-    })
+    daysOfWeek
+      .map((v) => v.toUpperCase())
+      .forEach((day, idx) => {
+        const x = idx * 3
+        values[row.AM][x] = `${day} (AM)`
+        merges.push({ x1: x, x2: x + 3, y1: row.AM, y2: row.AM + 1 })
+        if (!(day === 'Saturday' || day === 'Sunday')) {
+          values[row.PM][x] = `${day} (PM)`
+          merges.push({ x1: x, x2: x + 3, y1: row.PM, y2: row.PM + 1 })
+        }
+      })
 
     const boldAndCenter = (sheetId: number, rows: number[]) =>
       rows.map((row) => ({

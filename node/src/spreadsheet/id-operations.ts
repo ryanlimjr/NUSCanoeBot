@@ -3,7 +3,7 @@ import type { sheets_v4 } from '@googleapis/sheets'
 /**
  * Relatively low-level sheet operations that rely on having the ID
  */
-export class SheetsById {
+export class SpreadsheetById {
   protected core: sheets_v4.Sheets
   protected spreadsheetId: string
 
