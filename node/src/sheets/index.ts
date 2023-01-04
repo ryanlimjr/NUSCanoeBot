@@ -189,4 +189,25 @@ export class Sheets extends SheetsById {
       .then((sheetId) => this.deleteSheetById(sheetId))
       .catch((err) => console.log(`[DELETE SHEET]: ${err}`))
   }
+
+  /**
+   * Moves a sheet to the front.
+   */
+  async moveToFront(title: string) {
+    return this.getSheetId(title).then((id) => this.moveSheetById(id, 1))
+  }
+
+  async __createAttendance__(title: string) {
+    const properties = {
+      title,
+      gridProperties: { rowCount: 100, columnCount: 21 },
+    }
+    return this.core.spreadsheets.batchUpdate({
+      spreadsheetId: this.spreadsheetId,
+      resource: {
+        requests: [{ addSheet: { properties } }],
+        includeSpreadsheetInResponse: true,
+      },
+    } as sheets_v4.Params$Resource$Spreadsheets$Batchupdate)
+  }
 }

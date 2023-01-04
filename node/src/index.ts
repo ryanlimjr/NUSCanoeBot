@@ -31,9 +31,8 @@ export async function initializeTrainingDatabase(sheets: Sheets) {
   await sheets.setHeaders(sheetTitle, headers)
 }
 
-async function main() {
-  console.log('START')
-  const sheets = await Sheets.init()
+export async function demo(sheets: Sheets) {
+  console.log('start demo...')
   await initializeTrainingDatabase(sheets)
   const teamData = await sheets.getSheet('Team Data', TeamDataSheet)
   const nicknames = teamData.getNicknames()
@@ -44,6 +43,16 @@ async function main() {
   const attendanceData = attendanceSheet.getAttendance(nicknames)
   await sheets.appendRows('training-database', attendanceData)
   await sheets.setDateColumn('training-database', 0)
+  console.log('demo done!')
+}
+
+async function main() {
+  console.log('START')
+  const sheets = await Sheets.init()
+  await sheets
+    .deleteSheet('__weekly__')
+    .then(() => sheets.__createAttendance__('__weekly__'))
+    .then(() => sheets.moveToFront('__weekly__'))
   console.log('DONE')
 }
 
