@@ -11,39 +11,6 @@ export function camelCaseify(v: string) {
 }
 
 /**
- * Takes in a sheet in ROW major setting. This means that `sheets[0]`
- * refers to the first row, and `sheets[0][0]` refers to the cell A1.
- *
- * This function assumes that each training is recorded as such:
- *
- * ┌──────────────────────────┐
- * │Monday (AM)               │
- * ├──────────────────────────┤
- * │2/1/2023                  │
- * ├───────┬──────────┬───────┤
- * │Name   │Remarks   │Boat   │
- * ├───────┼──────────┼───────┤
- * │Syaz   │          │L8     │
- * └───────┴──────────┴───────┘
- *
- * Critical characteristics are:
- *  - `Monday` must be a day of the week
- *  - `(AM)` is either AM or PM in brackets. Brackets are required.
- *  - Date must be properly recognized by Google Sheets
- *  - `Name`, `Remarks`, `Boat` are exactly those three words.
- *
- *  @return a record where keys are the unique nicknames, and the
- *  values are the trainings that the person came for training.
- */
-export function parseAttendanceSheet(sheet: any[][]): Record<string, number[]> {
-  for (let i = 0; i < 10; i++) {
-    sheet.shift()
-  }
-  console.log(sheet)
-  return {}
-}
-
-/**
  * Checks whether or not the line is a Training Day
  * e.g. `Monday (AM)` or `Sunday (PM)`
  */
@@ -65,14 +32,6 @@ export function parseTrainingDay(line: string): [DayOfWeek, Session] {
   }
   const [dayOfWeek, session] = line.split(' ')
   return [dayOfWeek as DayOfWeek, session === '(AM)' ? 'Morning' : 'Afternoon']
-}
-
-/**
- * Checks if the (row, col) cell of the sheet marks the start of a
- * training attendance list
- */
-export function isAttendanceStart(cell: any, cellBelow: any): boolean {
-  return isTrainingDay(cell) && !isNaN(cellBelow)
 }
 
 /**

@@ -151,14 +151,13 @@ export class Sheets {
    * Appends a row to an existing sheet. This assumes that the sheet
    * has a header row, which it will use as keys to map the data into.
    */
-  async appendRow(title: string, data: Record<string, string>) {
+  async appendRows(title: string, data: Record<string, any>[]) {
     return this.getSheetRaw(title)
       .then((raw) => {
         const sheet = new Sheet(raw.data.values || [])
         const headers = sheet.getHeaders()
-        const newRow = headers.map((key) => data[key])
-        const newData = [newRow] // a 2-d sheet slice with one row
-        return newData
+        const newRows = data.map((row) => headers.map((key) => row[key]))
+        return newRows
       })
       .then((values) =>
         this.core.spreadsheets.values.append({
@@ -180,6 +179,43 @@ export class Sheets {
       range: title,
       requestBody: { majorDimension: 'ROWS', values: [headers] },
     })
+  }
+
+  /**
+   * In the sheet titled `title`, find the column with header
+   * `matchHeader` and set its formatting to DD-MM-YYYY
+   */
+  async setDateColumn(title: string, column: number) {
+    return this.listSheets()
+      .then((sheets) => this.getSheetId(sheets, title))
+      .then((sheetId) =>
+        this.core.spreadsheets.batchUpdate({
+          spreadsheetId: this.spreadsheetId,
+          resource: {
+            requests: [
+              {
+                repeatCell: {
+                  range: {
+                    sheetId,
+                    startRowIndex: 0,
+                    startColumnIndex: column,
+                    endColumnIndex: column + 1,
+                  },
+                  cell: {
+                    userEnteredFormat: {
+                      numberFormat: {
+                        type: 'DATE',
+                        pattern: 'dd-mm-yyyy',
+                      },
+                    },
+                  },
+                  fields: 'userEnteredFormat.numberFormat',
+                },
+              },
+            ],
+          },
+        } as sheets_v4.Params$Resource$Spreadsheets$Batchupdate)
+      )
   }
 
   /**
