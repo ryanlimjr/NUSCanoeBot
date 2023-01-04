@@ -7,7 +7,7 @@ export async function initializeUserDatabase(sheets: Sheets) {
   const headers = ['Nickname', 'Full Name', 'Birthday']
   await sheets.deleteSheet(sheetTitle)
   await sheets.addSheetToFront(sheetTitle, 1, headers.length)
-  await sheets.setHeader(sheetTitle, headers)
+  await sheets.setHeaders(sheetTitle, headers)
   await sheets.appendRows(sheetTitle, [
     {
       nickname: 'khang',
@@ -28,7 +28,7 @@ export async function initializeTrainingDatabase(sheets: Sheets) {
   ]
   await sheets.deleteSheet(sheetTitle)
   await sheets.addSheetToFront(sheetTitle, 1, headers.length)
-  await sheets.setHeader(sheetTitle, headers)
+  await sheets.setHeaders(sheetTitle, headers)
 }
 
 async function main() {

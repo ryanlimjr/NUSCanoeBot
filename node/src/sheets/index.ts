@@ -1,22 +1,19 @@
 import { sheets, auth, sheets_v4 } from '@googleapis/sheets'
 import { join } from 'path'
-import { Sheet } from './sheet'
+import { Sheet } from '../sheet'
+import { SheetsById } from './id-operations'
 
-export const CREDENTIALS_PATH = join(process.cwd(), 'google-credentials.json')
-export const SPREADSHEET_IDS = {
+const CREDENTIALS_PATH = join(process.cwd(), 'google-credentials.json')
+const SPREADSHEET_IDS = {
   main: '1W_mRwNhylC41bY6Hn5hmeRgUVpAdugsjHEwmoFtd2PM',
 }
 
-export class Sheets {
-  private core: sheets_v4.Sheets
-  private spreadsheetId: string
-
+export class Sheets extends SheetsById {
   /**
    * Initialize a new Sheets instance
    */
   constructor(core: sheets_v4.Sheets, spreadsheetId: string) {
-    this.spreadsheetId = spreadsheetId
-    this.core = core
+    super(core, spreadsheetId)
   }
 
   /**
@@ -42,10 +39,20 @@ export class Sheets {
    */
   async listSheets() {
     return this.core.spreadsheets
-      .get({
-        spreadsheetId: this.spreadsheetId,
-      })
+      .get({ spreadsheetId: this.spreadsheetId })
       .then((s) => s.data.sheets || [])
+  }
+
+  /**
+   * Gets a raw sheet.
+   */
+  async getSheetRaw(title: string, range?: string) {
+    return this.core.spreadsheets.values.get({
+      spreadsheetId: this.spreadsheetId,
+      range: range ? `${title}!${range}` : title,
+      valueRenderOption: 'UNFORMATTED_VALUE',
+      dateTimeRenderOption: 'SERIAL_NUMBER',
+    })
   }
 
   /**
@@ -56,44 +63,35 @@ export class Sheets {
    * @param range the range of cells to take (e.g. `A2:F9`)
    */
   async getSheet<T extends Sheet>(
-    name: string,
+    title: string,
     sheetClass: new (data: any[][]) => T,
     range?: string
   ): Promise<T> {
-    const res = this.core.spreadsheets.values.get({
-      spreadsheetId: this.spreadsheetId,
-      range: range ? `${name}!${range}` : name,
-      valueRenderOption: 'UNFORMATTED_VALUE',
-      dateTimeRenderOption: 'SERIAL_NUMBER',
-    })
-    return res.then((res) => new sheetClass(res.data.values || []))
-  }
-
-  /**
-   * Moves sheet with ID of `sheetId` to index `index`. Use an index
-   * of 1 to move it to the front.
-   */
-  private async moveSheet(sheetId: number, index: number) {
-    const move = {
-      updateSheetProperties: {
-        properties: { sheetId, index },
-        fields: 'index',
-      },
-    }
-    return this.core.spreadsheets.batchUpdate({
-      spreadsheetId: this.spreadsheetId,
-      resource: { requests: [move] },
-    } as sheets_v4.Params$Resource$Spreadsheets$Batchupdate)
+    return this.getSheetRaw(title, range).then(
+      (res) => new sheetClass(res.data.values || [])
+    )
   }
 
   /**
    * Obtains the sheet ID of a sheet by its title.
    */
-  private getSheetId(sheets: sheets_v4.Schema$Sheet[], title: string): number {
-    const sheet = sheets.find((sheet) => sheet.properties?.title === title)
-    if (!sheet || !sheet.properties || !sheet.properties.sheetId)
-      throw new Error(`Sheet not found: ${title}`)
-    return sheet.properties.sheetId
+  private async getSheetId(
+    title: string,
+    sheets?: sheets_v4.Schema$Sheet[]
+  ): Promise<number> {
+    const getSheets: Promise<sheets_v4.Schema$Sheet[]> = sheets
+      ? new Promise((res) => res(sheets))
+      : this.listSheets()
+    return getSheets
+      .then((sheets) => sheets.find((s) => s.properties?.title === title))
+      .then(
+        (sheet) =>
+          new Promise((res, rej) =>
+            sheet?.properties?.sheetId
+              ? res(sheet.properties.sheetId)
+              : rej(`Sheet not found: ${title}`)
+          )
+      )
   }
 
   /**
@@ -122,7 +120,7 @@ export class Sheets {
               return reject('Spreadsheet not updated. No sheet created.')
             if (!spreadsheet.sheets)
               return reject('No sheets found or created.')
-            const sheetId = this.getSheetId(spreadsheet.sheets, title)
+            const sheetId = this.getSheetId(title, spreadsheet.sheets)
             if (!sheetId) return reject(`Sheet ${title} has no ID.`)
             return resolve(sheetId)
           })
@@ -135,20 +133,8 @@ export class Sheets {
    */
   async addSheetToFront(title: string, rowCount: number, columnCount: number) {
     return this.addSheet(title, rowCount, columnCount).then((sheetId) =>
-      this.moveSheet(sheetId, 1)
+      this.moveSheetById(sheetId, 1)
     )
-  }
-
-  /**
-   * Gets a raw sheet.
-   */
-  async getSheetRaw(title: string, range?: string) {
-    return this.core.spreadsheets.values.get({
-      spreadsheetId: this.spreadsheetId,
-      range: range ? `${title}!${range}` : title,
-      valueRenderOption: 'UNFORMATTED_VALUE',
-      dateTimeRenderOption: 'SERIAL_NUMBER',
-    })
   }
 
   /**
@@ -176,7 +162,7 @@ export class Sheets {
   /**
    * Sets the header of a sheet.
    */
-  async setHeader(title: string, headers: string[]) {
+  async setHeaders(title: string, headers: string[]) {
     return this.core.spreadsheets.values.update({
       spreadsheetId: this.spreadsheetId,
       valueInputOption: 'RAW',
@@ -190,54 +176,16 @@ export class Sheets {
    * `matchHeader` and set its formatting to DD-MM-YYYY
    */
   async setDateColumn(title: string, column: number) {
-    return this.listSheets()
-      .then((sheets) => this.getSheetId(sheets, title))
-      .then((sheetId) =>
-        this.core.spreadsheets.batchUpdate({
-          spreadsheetId: this.spreadsheetId,
-          resource: {
-            requests: [
-              {
-                repeatCell: {
-                  range: {
-                    sheetId,
-                    startRowIndex: 0,
-                    startColumnIndex: column,
-                    endColumnIndex: column + 1,
-                  },
-                  cell: {
-                    userEnteredFormat: {
-                      numberFormat: {
-                        type: 'DATE',
-                        pattern: 'dd-mm-yyyy',
-                      },
-                    },
-                  },
-                  fields: 'userEnteredFormat.numberFormat',
-                },
-              },
-            ],
-          },
-        } as sheets_v4.Params$Resource$Spreadsheets$Batchupdate)
-      )
-  }
-
-  /**
-   * Deletes one sheet but its id.
-   */
-  async deleteSheetById(sheetId: number) {
-    return this.core.spreadsheets.batchUpdate({
-      spreadsheetId: this.spreadsheetId,
-      resource: { requests: [{ deleteSheet: { sheetId } }] },
-    } as sheets_v4.Params$Resource$Spreadsheets$Batchupdate)
+    return this.getSheetId(title).then((sheetId) =>
+      this.setDateColumnById(sheetId, column)
+    )
   }
 
   /**
    * Deletes one sheet by its title.
    */
   async deleteSheet(title: string) {
-    return this.listSheets()
-      .then((sheets) => this.getSheetId(sheets, title))
+    return this.getSheetId(title)
       .then((sheetId) => this.deleteSheetById(sheetId))
       .catch((err) => console.log(`[DELETE SHEET]: ${err}`))
   }
