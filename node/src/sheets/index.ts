@@ -108,11 +108,11 @@ export class Sheets extends SheetsById {
     return this.core.spreadsheets
       .batchUpdate({
         spreadsheetId: this.spreadsheetId,
-        resource: {
+        requestBody: {
           requests: [{ addSheet: { properties } }],
           includeSpreadsheetInResponse: true,
         },
-      } as sheets_v4.Params$Resource$Spreadsheets$Batchupdate)
+      })
       .then(
         (response) =>
           new Promise((resolve, reject) => {
@@ -240,7 +240,7 @@ export class Sheets extends SheetsById {
       .then((sheetId) =>
         this.core.spreadsheets.batchUpdate({
           spreadsheetId: this.spreadsheetId,
-          resource: {
+          requestBody: {
             requests: [
               ...merges.map((range) => ({
                 mergeCells: {
@@ -256,7 +256,7 @@ export class Sheets extends SheetsById {
               ...boldAndCenter(sheetId, [row.AM, row.PM]),
             ],
           },
-        } as sheets_v4.Params$Resource$Spreadsheets$Batchupdate)
+        })
       )
   }
 }

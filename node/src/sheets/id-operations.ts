@@ -21,8 +21,8 @@ export class SheetsById {
   protected async deleteSheetById(sheetId: number) {
     return this.core.spreadsheets.batchUpdate({
       spreadsheetId: this.spreadsheetId,
-      resource: { requests: [{ deleteSheet: { sheetId } }] },
-    } as sheets_v4.Params$Resource$Spreadsheets$Batchupdate)
+      requestBody: { requests: [{ deleteSheet: { sheetId } }] },
+    })
   }
 
   /**
@@ -38,8 +38,8 @@ export class SheetsById {
     }
     return this.core.spreadsheets.batchUpdate({
       spreadsheetId: this.spreadsheetId,
-      resource: { requests: [move] },
-    } as sheets_v4.Params$Resource$Spreadsheets$Batchupdate)
+      requestBody: { requests: [move] },
+    })
   }
 
   /**
@@ -49,7 +49,7 @@ export class SheetsById {
   async setDateColumnById(sheetId: number, column: number) {
     return this.core.spreadsheets.batchUpdate({
       spreadsheetId: this.spreadsheetId,
-      resource: {
+      requestBody: {
         requests: [
           {
             repeatCell: {
@@ -72,6 +72,6 @@ export class SheetsById {
           },
         ],
       },
-    } as sheets_v4.Params$Resource$Spreadsheets$Batchupdate)
+    })
   }
 }
