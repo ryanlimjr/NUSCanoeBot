@@ -1,41 +1,20 @@
-import { sheets, auth, sheets_v4 } from '@googleapis/sheets'
-import { join } from 'path'
+import type { sheets_v4 } from '@googleapis/sheets'
 import { Sheet } from '../sheet'
-import { CellRange, daysOfWeek } from '../types'
 import { SpreadsheetById } from './id-operations'
-
-const CREDENTIALS_PATH = join(process.cwd(), 'google-credentials.json')
-const SPREADSHEET_IDS = {
-  main: '1W_mRwNhylC41bY6Hn5hmeRgUVpAdugsjHEwmoFtd2PM',
-}
 
 export class Spreadsheet extends SpreadsheetById {
   /**
    * Initialize a new Sheets instance
    */
-  constructor(core: sheets_v4.Sheets, spreadsheetId: string) {
+  protected constructor(core: sheets_v4.Sheets, spreadsheetId: string) {
     super(core, spreadsheetId)
   }
 
-  /**
-   * Authenticate and initialize a working Sheets instance.
-   * Call with no options to use the default values.
-   *
-   * @param keyFile Path to a .json, .pem, or .p12 key file
-   * @param spreadsheetId ID of the main spreadsheet
-   */
-  static async init(
-    keyFile?: string,
-    spreadsheetId?: string
-  ): Promise<Spreadsheet> {
-    // fill in default values
-    keyFile = keyFile ? keyFile : CREDENTIALS_PATH
-    const id = spreadsheetId ? spreadsheetId : SPREADSHEET_IDS.main
-    // authenticate and get client
-    const scopes = ['https://www.googleapis.com/auth/spreadsheets']
-    const getClient = auth.getClient({ keyFile, scopes })
-    const core = getClient.then((auth) => sheets({ version: 'v4', auth }))
-    return core.then((core) => new Spreadsheet(core, id))
+  public static async init(spreadsheetId?: string): Promise<Spreadsheet> {
+    const id = spreadsheetId
+      ? spreadsheetId
+      : SpreadsheetById.SPREADSHEET_IDS.main
+    return SpreadsheetById.initCore().then((core) => new Spreadsheet(core, id))
   }
 
   /**
@@ -50,7 +29,7 @@ export class Spreadsheet extends SpreadsheetById {
   /**
    * Gets a raw sheet.
    */
-  async getSheetRaw(title: string, range?: string) {
+  protected getSheetRaw(title: string, range?: string) {
     return this.core.spreadsheets.values.get({
       spreadsheetId: this.spreadsheetId,
       range: range ? `${title}!${range}` : title,
@@ -79,7 +58,7 @@ export class Spreadsheet extends SpreadsheetById {
   /**
    * Obtains the sheet ID of a sheet by its title.
    */
-  private async getSheetId(
+  protected async getSheetId(
     title: string,
     sheets?: sheets_v4.Schema$Sheet[]
   ): Promise<number> {
@@ -102,7 +81,7 @@ export class Spreadsheet extends SpreadsheetById {
    * Adds a sheet to the spreadsheet defined by `this.spreadsheetId`
    * and returns its sheet id.
    */
-  private async addSheet(
+  protected async addSheet(
     title: string,
     rowCount: number,
     columnCount: number
@@ -199,69 +178,5 @@ export class Spreadsheet extends SpreadsheetById {
    */
   async moveToFront(title: string) {
     return this.getSheetId(title).then((id) => this.moveSheetById(id, 1))
-  }
-
-  async __createAttendance__(title: string) {
-    const values = Array.apply(null, Array(100)).map(() => Array(21).fill(''))
-    const merges: CellRange[] = []
-    const row = { AM: 10, PM: 50 }
-    daysOfWeek
-      .map((v) => v.toUpperCase())
-      .forEach((day, idx) => {
-        const x = idx * 3
-        values[row.AM][x] = `${day} (AM)`
-        merges.push({ x1: x, x2: x + 3, y1: row.AM, y2: row.AM + 1 })
-        if (!(day === 'Saturday' || day === 'Sunday')) {
-          values[row.PM][x] = `${day} (PM)`
-          merges.push({ x1: x, x2: x + 3, y1: row.PM, y2: row.PM + 1 })
-        }
-      })
-
-    const boldAndCenter = (sheetId: number, rows: number[]) =>
-      rows.map((row) => ({
-        repeatCell: {
-          range: { sheetId, startRowIndex: row, endRowIndex: row + 1 },
-          cell: {
-            userEnteredFormat: {
-              horizontalAlignment: 'CENTER',
-              textFormat: { bold: true },
-            },
-          },
-          fields: 'userEnteredFormat(textFormat,horizontalAlignment)',
-        },
-      }))
-
-    return this.addSheet(title, 100, 21)
-      .then((sheetId) =>
-        this.core.spreadsheets.values
-          .update({
-            spreadsheetId: this.spreadsheetId,
-            range: title,
-            valueInputOption: 'RAW',
-            requestBody: { values },
-          })
-          .then(() => sheetId)
-      )
-      .then((sheetId) =>
-        this.core.spreadsheets.batchUpdate({
-          spreadsheetId: this.spreadsheetId,
-          requestBody: {
-            requests: [
-              ...merges.map((range) => ({
-                mergeCells: {
-                  range: {
-                    sheetId,
-                    startRowIndex: range.y1,
-                    endRowIndex: range.y2,
-                    startColumnIndex: range.x1,
-                    endColumnIndex: range.x2,
-                  },
-                },
-              })),
-              ...boldAndCenter(sheetId, [row.AM, row.PM]),
-            ],
-          },
-        })
-      )
   }
 }

@@ -1,5 +1,6 @@
 import { TeamDataSheet, AttendanceSheet } from './sheet'
 import { Spreadsheet } from './spreadsheet'
+import { AttendanceBuilder } from './spreadsheet/build-attendance'
 
 export async function initializeUserDatabase(sheets: Spreadsheet) {
   const sheetTitle = 'user-database'
@@ -47,7 +48,7 @@ export async function demo(sheets: Spreadsheet) {
 
 async function main() {
   console.log('START')
-  const sheets = await Spreadsheet.init()
+  const sheets = await AttendanceBuilder.init()
   await sheets
     .deleteSheet('__weekly__')
     .then(() => sheets.__createAttendance__('__weekly__'))

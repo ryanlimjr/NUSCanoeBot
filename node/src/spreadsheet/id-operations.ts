@@ -1,4 +1,7 @@
-import type { sheets_v4 } from '@googleapis/sheets'
+import { auth, sheets, sheets_v4 } from '@googleapis/sheets'
+import { join } from 'path'
+
+const CREDENTIALS_PATH = join(process.cwd(), 'google-credentials.json')
 
 /**
  * Relatively low-level sheet operations that rely on having the ID
@@ -6,13 +9,37 @@ import type { sheets_v4 } from '@googleapis/sheets'
 export class SpreadsheetById {
   protected core: sheets_v4.Sheets
   protected spreadsheetId: string
+  protected static CREDENTIALS_PATH = join(
+    process.cwd(),
+    'google-credentials.json'
+  )
+  protected static SPREADSHEET_IDS = {
+    main: '1W_mRwNhylC41bY6Hn5hmeRgUVpAdugsjHEwmoFtd2PM',
+  }
 
   /**
    * Initialize a new Sheets instance
    */
-  constructor(core: sheets_v4.Sheets, spreadsheetId: string) {
+  protected constructor(core: sheets_v4.Sheets, spreadsheetId: string) {
     this.spreadsheetId = spreadsheetId
     this.core = core
+  }
+
+  /**
+   * Authenticate and initialize a working Sheets instance.
+   * Call with no options to use the default values.
+   *
+   * @param keyFile Path to a .json, .pem, or .p12 key file
+   * @param spreadsheetId ID of the main spreadsheet
+   */
+  protected static async initCore(keyFile?: string): Promise<sheets_v4.Sheets> {
+    // fill in default values
+    keyFile = keyFile ? keyFile : CREDENTIALS_PATH
+    // authenticate and get client
+    const scopes = ['https://www.googleapis.com/auth/spreadsheets']
+    return auth
+      .getClient({ keyFile, scopes })
+      .then((auth) => sheets({ version: 'v4', auth }))
   }
 
   /**
