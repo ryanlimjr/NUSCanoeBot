@@ -33,9 +33,9 @@ export type CellRange = {
   x1: number
   /** right-most column (exclusive) */
   x2: number
-  /** left-most row (inclusive) */
+  /** top-most row (inclusive) */
   y1: number
-  /** right-most row (exclusive) */
+  /** bottom-most row (exclusive) */
   y2: number
 }
 
