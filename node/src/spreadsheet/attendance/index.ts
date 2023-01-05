@@ -121,7 +121,8 @@ export class Attendance extends Spreadsheet {
           builder.validateNicknames(r, team)
         })
         builder.loadTemplate(templateId, { x1: 0, x2: 21, y1: 0, y2: 10 })
-        builder.lockDimensions(width, this.serviceEmail, [row.AM, row.PM])
+        builder.lockColumn(this.serviceEmail, width - 1)
+        builder.lockRows(this.serviceEmail, [row.AM, row.PM], 3)
         return builder.build(this.core, this.spreadsheetId)
       })
       .then(() => this.setPosition(monday))
@@ -192,5 +193,17 @@ export class Attendance extends Spreadsheet {
     const targetIndex = target.properties?.index
     if (!attId || !targetIndex) return
     return this.moveSheetById(attId, targetIndex + 1)
+  }
+
+  /**
+   * Formats the template
+   */
+  async formatTemplate() {
+    return this.getSheetId(this.TEMPLATE_TITLE).then((sheetId) => {
+      const builder = new Builder(sheetId)
+      builder.lockColumn(this.serviceEmail, 21)
+      builder.lockRows(this.serviceEmail, [10])
+      return builder.build(this.core, this.spreadsheetId)
+    })
   }
 }

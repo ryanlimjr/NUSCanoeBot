@@ -26,42 +26,52 @@ export class Builder {
   }
 
   /**
-   * Lock the dimensions of the sheet, and also lock the training headers
-   * while at it.
+   * Lock the last column of the sheet and hides it.
    */
-  lockDimensions(width: number, email: string, trainingRows: number[]) {
+  lockColumn(email: string, width: number) {
     this.requests.push({
       updateDimensionProperties: {
         range: {
           sheetId: this.sheetId,
           dimension: 'COLUMNS',
-          startIndex: width - 1,
-          endIndex: width,
+          startIndex: width,
+          endIndex: width + 1,
         },
         properties: { pixelSize: 1, hiddenByUser: true },
         fields: 'pixelSize,hiddenByUser',
       },
     })
-    const ranges: sheets_v4.Schema$GridRange[] = []
-    trainingRows.forEach((row) => {
-      ranges.push({
+    this.requests.push({
+      addProtectedRange: {
+        protectedRange: {
+          range: {
+            sheetId: this.sheetId,
+            startColumnIndex: width,
+            endColumnIndex: width + 1,
+          },
+          editors: { users: [email] },
+        },
+      },
+    })
+  }
+
+  /**
+   * Locks the specified rows.
+   */
+  lockRows(email: string, trainingRows: number[], rowHeight = 1) {
+    trainingRows
+      .map((row) => ({
         sheetId: this.sheetId,
         startRowIndex: row,
-        endRowIndex: row + 3,
+        endRowIndex: row + rowHeight,
+      }))
+      .forEach((range) => {
+        this.requests.push({
+          addProtectedRange: {
+            protectedRange: { range, editors: { users: [email] } },
+          },
+        })
       })
-    })
-    ranges.push({
-      sheetId: this.sheetId,
-      startColumnIndex: width - 1,
-      endColumnIndex: width,
-    })
-    ranges.forEach((range) => {
-      this.requests.push({
-        addProtectedRange: {
-          protectedRange: { range, editors: { users: [email] } },
-        },
-      })
-    })
   }
 
   /**

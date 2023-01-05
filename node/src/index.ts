@@ -1,6 +1,7 @@
 import { Spreadsheet, Attendance, TeamData } from './spreadsheet'
 import { Date2 } from './date'
 import { MasterAttendance } from './spreadsheet/master-attendance'
+import { attendanceSheetTitle } from './string'
 
 export async function initializeUserDatabase(sheets: Spreadsheet) {
   const sheetTitle = 'user-database'
@@ -59,11 +60,12 @@ async function main() {
 
   // await attendance.deleteSheet(attendanceSheetTitle(dates[0]))
   // await attendance.deleteSheet(attendanceSheetTitle(dates[1]))
-  // await attendance.deleteSheet(attendanceSheetTitle(dates[2]))
   // await attendance.createWeek(dates[0], teamData).catch(errMsg)
   // await attendance.createWeek(dates[1], teamData).catch(errMsg)
   // await attendance.createWeek(dates[2], teamData).catch(errMsg)
+  await attendance.deleteSheet(attendanceSheetTitle(dates[3]))
   await attendance.createWeek(dates[3], teamData).catch(errMsg)
+  await attendance.formatTemplate()
 
   console.log('DONE')
 }
