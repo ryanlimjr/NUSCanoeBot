@@ -1,16 +1,16 @@
 import { sheets_v4 } from '@googleapis/sheets'
-import { Spreadsheet, SPREADSHEET_IDS, initCore } from './base'
+import { Spreadsheet, SPREADSHEET_IDS, initCore } from '../base'
 import {
   AttendanceEntry,
   CellRange,
   DayOfWeek,
   daysOfWeek,
   TeamMember,
-  toGridRange,
   Session,
-} from '../types'
-import { attendanceSheetTitle, namedRange } from '../string'
-import { Date2 } from '../date'
+} from '../../types'
+import { attendanceSheetTitle, namedRange } from '../../string'
+import { Date2 } from '../../date'
+import { Builder, TrainingRange } from './builder'
 
 const trainingDays: { day: DayOfWeek; session: Session }[] = [
   // Days with Morning Training
@@ -28,188 +28,6 @@ const trainingDays: { day: DayOfWeek; session: Session }[] = [
   { day: 'Thursday', session: 'PM' },
   { day: 'Friday', session: 'PM' },
 ]
-
-type TrainingRange = {
-  date: Date2
-  session: Session
-  range: CellRange
-}
-
-/**
- * A helper class to build a weekly attendance list.
- */
-class Builder {
-  requests: sheets_v4.Schema$Request[]
-  sheetId: number
-
-  constructor(sheetId: number) {
-    this.sheetId = sheetId
-    this.requests = []
-  }
-
-  private toGridRange(range: CellRange, sheetId: number = this.sheetId) {
-    return toGridRange(range, sheetId)
-  }
-
-  private add(request: sheets_v4.Schema$Request) {
-    this.requests.push(request)
-  }
-
-  lockDimensions(width: number, email: string, trainingRows: number[]) {
-    this.add({
-      updateDimensionProperties: {
-        range: {
-          sheetId: this.sheetId,
-          dimension: 'COLUMNS',
-          startIndex: width - 1,
-          endIndex: width,
-        },
-        properties: { pixelSize: 1, hiddenByUser: true },
-        fields: 'pixelSize,hiddenByUser',
-      },
-    })
-    const ranges: sheets_v4.Schema$GridRange[] = []
-    trainingRows.forEach((row) => {
-      ranges.push({
-        sheetId: this.sheetId,
-        startRowIndex: row,
-        endRowIndex: row + 3,
-      })
-    })
-    ranges.push({
-      sheetId: this.sheetId,
-      startColumnIndex: width - 1,
-      endColumnIndex: width,
-    })
-    ranges.forEach((range) => {
-      this.add({
-        addProtectedRange: {
-          protectedRange: { range, editors: { users: [email] } },
-        },
-      })
-    })
-  }
-
-  mergeBoldCenter(range: CellRange) {
-    this.add({ mergeCells: { range: this.toGridRange(range) } })
-    this.add({
-      repeatCell: {
-        range: this.toGridRange(range),
-        cell: {
-          userEnteredFormat: {
-            horizontalAlignment: 'CENTER',
-            textFormat: { bold: true },
-          },
-        },
-        fields: 'userEnteredFormat(textFormat,horizontalAlignment)',
-      },
-    })
-  }
-
-  bold(range: CellRange) {
-    this.add({
-      repeatCell: {
-        range: this.toGridRange(range),
-        cell: { userEnteredFormat: { textFormat: { bold: true } } },
-        fields: 'userEnteredFormat.textFormat',
-      },
-    })
-  }
-
-  name(trainingRange: TrainingRange) {
-    const { range, session, date } = trainingRange
-    this.add({
-      addNamedRange: {
-        namedRange: {
-          name: namedRange(date, session),
-          range: this.toGridRange(range),
-        },
-      },
-    })
-  }
-
-  color(trainingRange: TrainingRange) {
-    const { range, date } = trainingRange
-    this.add({
-      repeatCell: {
-        range: this.toGridRange(range),
-        cell: {
-          userEnteredFormat: {
-            backgroundColor: [2, 4, 6].includes(date.day())
-              ? {
-                  red: 0.64,
-                  green: 0.76,
-                  blue: 0.96,
-                }
-              : {
-                  red: 0.95,
-                  green: 0.76,
-                  blue: 0.2,
-                },
-          },
-        },
-        fields: 'userEnteredFormat.backgroundColor',
-      },
-    })
-  }
-
-  loadTemplate(templateSheetId: number, range: CellRange) {
-    this.add({
-      copyPaste: {
-        source: this.toGridRange(range, templateSheetId),
-        destination: this.toGridRange(range),
-        pasteType: 'PASTE_NORMAL',
-        pasteOrientation: 'NORMAL',
-      },
-    })
-  }
-
-  allBorder(trainingRange: TrainingRange) {
-    const range = { ...trainingRange.range, y1: trainingRange.range.y1 - 3 }
-    const gray = 0.2
-    const borderStyle = {
-      style: 'SOLID',
-      colorStyle: { rgbColor: { red: gray, green: gray, blue: gray } },
-    }
-    this.add({
-      updateBorders: {
-        range: this.toGridRange(range),
-        top: borderStyle,
-        bottom: borderStyle,
-        right: borderStyle,
-        left: borderStyle,
-        innerHorizontal: borderStyle,
-        innerVertical: borderStyle,
-      },
-    })
-  }
-
-  validateNicknames(trainingRange: TrainingRange, team: TeamMember[]) {
-    const range = { ...trainingRange.range, x2: trainingRange.range.x1 + 1 }
-    this.add({
-      setDataValidation: {
-        range: this.toGridRange(range),
-        rule: {
-          condition: {
-            type: 'ONE_OF_LIST',
-            values: team.map((m) => ({
-              userEnteredValue: m.nickname,
-            })),
-          },
-          strict: true,
-          showCustomUi: true,
-        },
-      },
-    })
-  }
-
-  async build(core: sheets_v4.Sheets, spreadsheetId: string) {
-    return core.spreadsheets.batchUpdate({
-      spreadsheetId,
-      requestBody: { requests: this.requests },
-    })
-  }
-}
 
 /**
  * Builds on top of the `Spreadsheet` class to form an ergonomic
