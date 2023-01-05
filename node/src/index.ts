@@ -52,6 +52,13 @@ async function main() {
     .deleteSheet('__weekly__')
     .then(() => sheets.__createAttendance__('__weekly__'))
     .then(() => sheets.moveToFront('__weekly__'))
+    .catch((e) => console.log('MAIN LOOP', e))
+
+  // await sheets
+  //   .__createAttendance__('__weekly__')
+  //   .then(() => sheets.moveToFront('__weekly__'))
+  //   .catch((e) => console.log('MAIN LOOP', e))
+  // await sheets.listNamedRanges().then(console.log)
   console.log('DONE')
 }
 

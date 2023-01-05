@@ -40,13 +40,57 @@ class SpreadsheetById {
   }
 
   /**
+   * List all sheets under the spreadsheet
+   */
+  async listSheets() {
+    return this.core.spreadsheets
+      .get({ spreadsheetId: this.spreadsheetId })
+      .then((s) => s.data.sheets || [])
+  }
+
+  /**
+   * List all named ranges under the spreadsheet. Note that the
+   * namespace of ranges span the entire spreadsheet, and not just one
+   * sheet.
+   */
+  async listNamedRanges() {
+    return this.core.spreadsheets
+      .get({ spreadsheetId: this.spreadsheetId })
+      .then((s) => {
+        // if (!s.data.namedRanges || s.data.namedRanges?.length === 0) {
+        //   console.log(Object.keys(s.data))
+        //   throw new Error('No named ranges')
+        // }
+        return s.data.namedRanges || []
+      })
+  }
+
+  /**
    * Deletes one sheet but its id.
    */
   protected async deleteSheetById(sheetId: number) {
-    return this.core.spreadsheets.batchUpdate({
-      spreadsheetId: this.spreadsheetId,
-      requestBody: { requests: [{ deleteSheet: { sheetId } }] },
-    })
+    // delete related named ranges so none are left hanging
+    const getNamedRangeIds = this.listNamedRanges().then((ranges) =>
+      ranges
+        .filter((range) => range.range?.sheetId === sheetId)
+        .map((r) => r.namedRangeId || '')
+        .filter((id) => id.length > 0)
+    )
+    return getNamedRangeIds.then((namedRangeIds) =>
+      this.core.spreadsheets.batchUpdate({
+        spreadsheetId: this.spreadsheetId,
+        requestBody: {
+          requests: [
+            ...namedRangeIds.map(
+              (id): sheets_v4.Schema$Request => ({
+                deleteNamedRange: { namedRangeId: id },
+              })
+            ),
+            { deleteSheet: { sheetId } },
+          ],
+        },
+      })
+    )
   }
 
   /**
@@ -114,15 +158,6 @@ export class Spreadsheet extends SpreadsheetById {
   public static async init(spreadsheetId?: string): Promise<Spreadsheet> {
     const id = spreadsheetId ? spreadsheetId : SPREADSHEET_IDS.main
     return initCore().then((core) => new Spreadsheet(core, id))
-  }
-
-  /**
-   * List all sheets under the spreadsheet of ID `this.spreadsheetId`
-   */
-  async listSheets() {
-    return this.core.spreadsheets
-      .get({ spreadsheetId: this.spreadsheetId })
-      .then((s) => s.data.sheets || [])
   }
 
   /**

@@ -21,8 +21,13 @@ export class AttendanceBuilder extends Spreadsheet {
   }
 
   async __createAttendance__(title: string) {
-    const values = Array.apply(null, Array(100)).map(() => Array(21).fill(''))
+    const height = 100
+    const width = 21
+    const values = Array.apply(null, Array(height)).map(() =>
+      Array(width).fill('')
+    )
     const merges: CellRange[] = []
+    const namedRanges: [string, CellRange][] = []
 
     const row = { AM: 10, PM: 50 }
     daysOfWeek
@@ -31,10 +36,19 @@ export class AttendanceBuilder extends Spreadsheet {
         const x = idx * 3
         values[row.AM][x] = `${day} (AM)`
         merges.push({ x1: x, x2: x + 3, y1: row.AM, y2: row.AM + 1 })
+        namedRanges.push([
+          `${day}.AM`,
+          { x1: x, x2: x + 3, y1: row.AM, y2: row.PM },
+        ])
+
         // No afternoon session on Saturday/Sunday
         if (!(day === 'Saturday' || day === 'Sunday')) {
           values[row.PM][x] = `${day} (PM)`
           merges.push({ x1: x, x2: x + 3, y1: row.PM, y2: row.PM + 1 })
+          namedRanges.push([
+            `${day}.PM`,
+            { x1: x, x2: x + 3, y1: row.PM, y2: height },
+          ])
         }
       })
 
@@ -70,6 +84,13 @@ export class AttendanceBuilder extends Spreadsheet {
                       },
                     },
                     fields: 'userEnteredFormat(textFormat,horizontalAlignment)',
+                  },
+                })
+              ),
+              ...namedRanges.map(
+                ([name, range]): sheets_v4.Schema$Request => ({
+                  addNamedRange: {
+                    namedRange: { name, range: toGridRange(range, sheetId) },
                   },
                 })
               ),
