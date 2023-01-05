@@ -32,21 +32,6 @@ export async function initializeTrainingDatabase(sheets: Spreadsheet) {
   await sheets.setHeaders(sheetTitle, headers)
 }
 
-export async function buildAttendance(sheets: Attendance) {
-  await sheets.clearNamedRanges()
-  const date = Date2.from(2023, 1, 8)
-  const title = attendanceSheetTitle(date)
-  const deleteSheet = sheets.deleteSheet(title)
-  const create = deleteSheet.then(() => sheets.createWeek(date))
-  const move = create.then((title) => sheets.moveToFront(title))
-  await move.catch((e) => console.log('MAIN LOOP', e))
-  await sheets.listSheets().then((sheets) => {
-    const a = sheets.find((s) => s.properties?.title === title)
-    if (!a) return
-    console.log(a.developerMetadata)
-  })
-}
-
 export const errMsg = (e: any) => console.log(e.message)
 
 async function main() {
@@ -61,21 +46,27 @@ async function main() {
   const masterAtt = await MasterAttendance.init()
   // masterAtt.create().catch(errMsg)
 
+  const dates = [
+    Date2.from(2023, 1, 2),
+    Date2.from(2023, 1, 9),
+    Date2.from(2023, 1, 16),
+  ]
+
   // create attendance (currently hard-coded with some real life data)
   const attendance = await Attendance.init()
-  await attendance.createWeek(Date2.from(2023, 1, 15)).catch(errMsg)
-  await attendance.createWeek(Date2.from(2023, 1, 8)).catch(errMsg)
 
-  const dates = [Date2.from(2023, 1, 8), Date2.from(2023, 1, 15)]
+  await attendance.deleteSheet(attendanceSheetTitle(dates[0]))
+  await attendance.createWeek(dates[0], teamData).catch(errMsg)
+  // await attendance.createWeek(dates[1]).catch(errMsg)
+  // await attendance.createWeek(dates[2]).catch(errMsg)
 
-  for (let i = 0; i < dates.length; i++) {
-    const date = dates[i]
-    await attendance
-      .getAttendance(date, teamData)
-      .then(([att]) => masterAtt.updateAttendance(date, att))
-  }
+  // for (let i = 0; i < dates.length; i++) {
+  //   const date = dates[i]
+  //   await attendance
+  //     .getAttendance(date, teamData)
+  //     .then(([att]) => masterAtt.updateAttendance(date, att))
+  // }
 
-  // await Promise.allSettled(promises)
   console.log('DONE')
 }
 

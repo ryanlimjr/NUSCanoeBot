@@ -78,6 +78,7 @@ export class MasterAttendance extends Spreadsheet {
    * Cleans up the database without changing its data.
    */
   async sanitize() {
+    const dateCol = this.headers.indexOf('Date')
     return this.setDateColumn(this.title, this.headers.indexOf('Date'))
       .then(() => this.getSheetId(this.title))
       .then((sheetId) =>
@@ -85,6 +86,22 @@ export class MasterAttendance extends Spreadsheet {
           spreadsheetId: this.spreadsheetId,
           requestBody: {
             requests: [
+              {
+                repeatCell: {
+                  range: {
+                    sheetId,
+                    startRowIndex: 0,
+                    startColumnIndex: dateCol,
+                    endColumnIndex: dateCol + 1,
+                  },
+                  cell: {
+                    userEnteredFormat: {
+                      numberFormat: { type: 'DATE', pattern: 'dd/mm/yyyy' },
+                    },
+                  },
+                  fields: 'userEnteredFormat.numberFormat',
+                },
+              },
               {
                 sortRange: {
                   range: { sheetId, startRowIndex: 1 },
@@ -124,6 +141,10 @@ export class MasterAttendance extends Spreadsheet {
   async updateAttendance(monday: Date2, entries: AttendanceEntry[]) {
     return this.removeOldEntries(monday)
       .then(() => this.appendRows(this.title, entries))
-      .then(() => this.sanitize().catch((e) => console.log(e.message)))
+      .then((rows) => {
+        if (rows > 1) {
+          return this.sanitize().catch((e) => console.log(e.message))
+        }
+      })
   }
 }

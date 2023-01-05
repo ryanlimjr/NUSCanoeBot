@@ -50,19 +50,20 @@ export class Attendance extends Spreadsheet {
    * Creates an attendance list for the week that begins with Monday
    * `monday`
    */
-  async createWeek(monday: Date2) {
+  async createWeek(monday: Date2, team: TeamMember[]) {
     const title = attendanceSheetTitle(monday)
     const height = 100
-    const width = 21
+    const width = 22
 
     const values = Array.apply(null, Array(height)).map(() =>
       Array(width).fill('')
     )
     const merges: CellRange[] = []
     const bolds: CellRange[] = []
-    const namedRanges: [string, CellRange][] = []
+    const namedRanges: [Date2, Session, CellRange][] = []
 
     const row = { AM: 10, PM: 50 }
+    const templateId = await this.getSheetId('Weekly Template')
 
     trainingDays
       .map((t) => ({ ...t, y: t.session === 'AM' ? row.AM : row.PM }))
@@ -84,14 +85,15 @@ export class Attendance extends Spreadsheet {
         bolds.push({ x1: x, x2: x + 3, y1: y + 2, y2: y + 3 })
 
         namedRanges.push([
-          namedRange(monday.incrementDay(idx), session),
+          monday.incrementDay(idx),
+          session,
           session === 'AM'
-            ? { x1: x, x2: x + 3, y1: row.AM + 3, y2: row.PM }
-            : { x1: x, x2: x + 3, y1: row.PM + 3, y2: height },
+            ? { x1: x, x2: x + 3, y1: row.AM + 3, y2: row.PM - 2 }
+            : { x1: x, x2: x + 3, y1: row.PM + 3, y2: height - 1 },
         ])
       })
 
-    return this.addSheet(title, 100, 21, { type: 'attendance' })
+    return this.addSheet(title, height, width, { type: 'attendance' })
       .then((sheetId) =>
         this.core.spreadsheets.values
           .update({
@@ -136,12 +138,153 @@ export class Attendance extends Spreadsheet {
                 })
               ),
               ...namedRanges.map(
-                ([name, range]): sheets_v4.Schema$Request => ({
+                ([date, session, range]): sheets_v4.Schema$Request => ({
                   addNamedRange: {
-                    namedRange: { name, range: toGridRange(range, sheetId) },
+                    namedRange: {
+                      name: namedRange(date, session),
+                      range: toGridRange(range, sheetId),
+                    },
                   },
                 })
               ),
+              // color the entry cells
+              ...namedRanges.map(
+                ([date, _, range]): sheets_v4.Schema$Request => ({
+                  repeatCell: {
+                    range: toGridRange(range, sheetId),
+                    cell: {
+                      userEnteredFormat: {
+                        backgroundColor: [2, 4, 6].includes(date.day())
+                          ? {
+                              red: 0.64,
+                              green: 0.76,
+                              blue: 0.96,
+                            }
+                          : {
+                              red: 0.95,
+                              green: 0.76,
+                              blue: 0.2,
+                            },
+                      },
+                    },
+                    fields: 'userEnteredFormat.backgroundColor',
+                  },
+                })
+              ),
+              // copy-paste the template header over
+              {
+                copyPaste: {
+                  source: {
+                    sheetId: templateId,
+                    startRowIndex: 0,
+                    endRowIndex: 10,
+                    startColumnIndex: 0,
+                    endColumnIndex: 21,
+                  },
+                  destination: {
+                    sheetId,
+                    startRowIndex: 0,
+                    endRowIndex: 10,
+                    startColumnIndex: 0,
+                    endColumnIndex: 21,
+                  },
+                  pasteType: 'PASTE_NORMAL',
+                  pasteOrientation: 'NORMAL',
+                },
+              },
+              // add borders to each training
+              ...namedRanges.map(([_, __, r]): sheets_v4.Schema$Request => {
+                const range = { ...r, y1: r.y1 - 3 }
+                const borderStyle = {
+                  style: 'SOLID',
+                  colorStyle: { rgbColor: { red: 0, green: 0, blue: 0 } },
+                }
+                return {
+                  updateBorders: {
+                    range: toGridRange(range, sheetId),
+                    top: borderStyle,
+                    bottom: borderStyle,
+                    right: borderStyle,
+                    left: borderStyle,
+                    innerHorizontal: borderStyle,
+                    innerVertical: borderStyle,
+                  },
+                }
+              }),
+              // data validation for nicknames
+              ...namedRanges.map(([_, __, r]): sheets_v4.Schema$Request => {
+                const range = { ...r, x2: r.x1 + 1 }
+                return {
+                  setDataValidation: {
+                    range: toGridRange(range, sheetId),
+                    rule: {
+                      condition: {
+                        type: 'ONE_OF_LIST',
+                        values: team.map((m) => ({
+                          userEnteredValue: m.nickname,
+                        })),
+                      },
+                      strict: true,
+                      showCustomUi: true,
+                    },
+                  },
+                }
+              }),
+              // create a hidden dummy column at the end to protect
+              {
+                updateDimensionProperties: {
+                  range: {
+                    sheetId,
+                    dimension: 'COLUMNS',
+                    startIndex: width - 1,
+                    endIndex: width,
+                  },
+                  properties: { pixelSize: 1, hiddenByUser: true },
+                  fields: 'pixelSize,hiddenByUser',
+                },
+              },
+              // prevent new rows from being added
+              {
+                addProtectedRange: {
+                  protectedRange: {
+                    range: {
+                      sheetId,
+                      startColumnIndex: width - 1,
+                      endColumnIndex: width,
+                    },
+                    editors: { users: [this.serviceEmail] },
+                    description: 'Protect sheet height.',
+                  },
+                },
+              },
+              // prevent new columns from being added
+              {
+                addProtectedRange: {
+                  protectedRange: {
+                    range: {
+                      sheetId,
+                      startRowIndex: row.AM,
+                      endRowIndex: row.AM + 3,
+                    },
+                    editors: { users: [this.serviceEmail] },
+                    description: 'Protect sheet width.',
+                  },
+                },
+              },
+              // prevent new columns from being added
+              {
+                addProtectedRange: {
+                  protectedRange: {
+                    range: {
+                      sheetId,
+                      startRowIndex: row.PM,
+                      endRowIndex: row.PM + 3,
+                    },
+                    editors: { users: [this.serviceEmail] },
+                    description: 'Protect sheet width.',
+                  },
+                },
+              },
             ],
           },
         })

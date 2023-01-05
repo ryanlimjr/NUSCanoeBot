@@ -3,6 +3,8 @@ import { join } from 'path'
 import { camelCaseify } from '../string'
 
 export const CREDENTIALS_PATH = join(process.cwd(), 'google-credentials.json')
+export const SERVICE_EMAIL =
+  'nus-canoe-service-account@nus-canoe.iam.gserviceaccount.com'
 export const SPREADSHEET_IDS = {
   main: '1FGaXn4gvXpr6E-b4JO4O2pZk43jHpxvZHPJtN5SJc88',
 }
@@ -30,6 +32,7 @@ export async function initCore(keyFile?: string): Promise<sheets_v4.Sheets> {
 class SpreadsheetById {
   protected core: sheets_v4.Sheets
   protected spreadsheetId: string
+  protected serviceEmail = SERVICE_EMAIL
 
   /**
    * Initialize a new Sheets instance
@@ -296,21 +299,29 @@ export class Spreadsheet extends SpreadsheetById {
   /**
    * Appends a row to an existing sheet. This assumes that the sheet
    * has a header row, which it will use as keys to map the data into.
+   *
+   * Returns number of rows in the sheet
    */
   async appendRows(title: string, data: Record<string, any>[]) {
     return this.getSheetRaw(title)
       .then((raw) => {
         const sheet = raw.data.values || []
         const headers = sheet[0].map((v) => camelCaseify(`${v}`))
-        return data.map((row) => headers.map((key) => row[key]))
+        return {
+          values: data.map((row) => headers.map((key) => row[key])),
+          existingRows: sheet.length,
+        }
       })
-      .then((values) =>
-        this.core.spreadsheets.values.append({
-          spreadsheetId: this.spreadsheetId,
-          valueInputOption: 'RAW',
-          range: title,
-          requestBody: { majorDimension: 'ROWS', values },
-        })
+      .then(({ values, existingRows }) =>
+        this.core.spreadsheets.values
+          .append({
+            spreadsheetId: this.spreadsheetId,
+            valueInputOption: 'RAW',
+            range: title,
+            requestBody: { majorDimension: 'ROWS', values },
+          })
+          .then(() => values.length + existingRows)
+          .catch(() => existingRows)
       )
   }
 

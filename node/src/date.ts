@@ -4,7 +4,7 @@ import { months } from './types'
  * Anti-timezone date class.
  */
 export class Date2 {
-  d: Date
+  private d: Date
 
   private constructor(time: number) {
     this.d = new Date(time)
@@ -42,7 +42,11 @@ export class Date2 {
    * Checks if the current date is a Monday.
    */
   isMonday() {
-    return this.d.getUTCDay() === 0
+    return this.d.getUTCDay() === 1
+  }
+
+  day() {
+    return this.d.getUTCDay()
   }
 
   /**
