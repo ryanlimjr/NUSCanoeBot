@@ -38,6 +38,8 @@ export class Attendance extends Spreadsheet {
     super(core, spreadsheetId)
   }
 
+  private TEMPLATE_TITLE = 'Attendance'
+
   /**
    * Authenticate with Google Sheets API and initialize `Attendance`
    */
@@ -63,7 +65,7 @@ export class Attendance extends Spreadsheet {
     const trainingRanges: TrainingRange[] = []
 
     const row = { AM: 10, PM: 50 }
-    const templateId = await this.getSheetId('Weekly Template')
+    const templateId = await this.getSheetId(this.TEMPLATE_TITLE)
 
     trainingDays
       .map((t) => ({ ...t, y: t.session === 'AM' ? row.AM : row.PM }))
@@ -94,7 +96,10 @@ export class Attendance extends Spreadsheet {
         })
       })
 
-    return this.addSheet(title, height, width, { type: 'attendance' })
+    return this.addSheet(title, height, width, {
+      type: 'attendance',
+      weekStart: monday.toYYYYMMDD(''),
+    })
       .then((sheetId) =>
         this.core.spreadsheets.values
           .update({
@@ -119,6 +124,7 @@ export class Attendance extends Spreadsheet {
         builder.lockDimensions(width, this.serviceEmail, [row.AM, row.PM])
         return builder.build(this.core, this.spreadsheetId)
       })
+      .then(() => this.setPosition(monday))
   }
 
   /**
@@ -173,5 +179,18 @@ export class Attendance extends Spreadsheet {
         })
         return [attendance, errors]
       })
+  }
+
+  /**
+   * Sets the position of the attendance sheet that starts on `monday`
+   * to the right of the template sheet.
+   */
+  async setPosition(monday: Date2) {
+    const att = await this.getSheetByMeta('weekStart', monday.toYYYYMMDD(''))
+    const target = await this.getSheetByMeta('type', 'attendanceTemplate')
+    const attId = att.properties?.sheetId
+    const targetIndex = target.properties?.index
+    if (!attId || !targetIndex) return
+    return this.moveSheetById(attId, targetIndex + 1)
   }
 }

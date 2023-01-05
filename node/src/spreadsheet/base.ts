@@ -287,6 +287,74 @@ export class Spreadsheet extends SpreadsheetById {
   }
 
   /**
+   * Retrieves an attendance sheet by developer metadata instead of
+   * sheet title.
+   */
+  async getSheetByMeta(
+    key: string,
+    value: string
+  ): Promise<sheets_v4.Schema$Sheet> {
+    return this.core.spreadsheets
+      .get({ spreadsheetId: this.spreadsheetId })
+      .then(async (spreadsheet) => {
+        const sheets = spreadsheet.data.sheets || []
+        if (sheets.length === 0) throw new Error('No sheets found')
+        const pred = (m: sheets_v4.Schema$DeveloperMetadata) =>
+          m.metadataKey === key && m.metadataValue === value
+        const sheet = sheets.find((v) => {
+          const meta = v.developerMetadata
+          return meta ? Boolean(meta.find(pred)) : false
+        })
+        if (!sheet)
+          throw new Error(
+            `No sheet found with metadata key-value pair: [${key}, ${value}]`
+          )
+        return sheet
+      })
+  }
+
+  /**
+   * Deletes a metadata entry by id.
+   */
+  async deleteMetadataById(id: number) {
+    return this.core.spreadsheets.batchUpdate({
+      spreadsheetId: this.spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            deleteDeveloperMetadata: {
+              dataFilter: { developerMetadataLookup: { metadataId: id } },
+            },
+          },
+        ],
+      },
+    })
+  }
+
+  /**
+   * Set metadata of a sheet by id.
+   */
+  async setMetadataById(sheetId: number, key: string, value: string) {
+    return this.core.spreadsheets.batchUpdate({
+      spreadsheetId: this.spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            createDeveloperMetadata: {
+              developerMetadata: {
+                location: { sheetId },
+                metadataKey: key,
+                metadataValue: value,
+                visibility: 'PROJECT',
+              },
+            },
+          },
+        ],
+      },
+    })
+  }
+
+  /**
    * Creates a new sheet and moves it to the front, such that it is
    * visible immediately to the Google Sheet's front-end user.
    */

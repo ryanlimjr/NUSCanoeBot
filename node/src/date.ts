@@ -67,6 +67,17 @@ export class Date2 {
   }
 
   /**
+   * Format the date to `YYYY/MM/DD` with a custom delimiter.
+   * This has to be sort-friendly, and hence the padding.
+   */
+  toYYYYMMDD(delimiter: string = '/') {
+    const date = String(this.d.getUTCDate()).padStart(2, '0')
+    const month = String(this.d.getUTCMonth() + 1).padStart(2, '0')
+    const year = this.d.getUTCFullYear()
+    return `${year}${delimiter}${month}${delimiter}${date}`
+  }
+
+  /**
    * Creates a new Date2 instance that is `days` ahead.
    */
   incrementDay(days: number): Date2 {

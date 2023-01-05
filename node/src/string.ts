@@ -44,7 +44,7 @@ export function attendanceSheetTitle(monday: Date2): string {
   if (!monday.isMonday()) {
     throw new Error(`${monday} should be a Monday.`)
   }
-  return `A(${monday.toMMMDD()} - ${monday.incrementDay(6).toMMMDD()})`
+  return `${monday.toMMMDD()} - ${monday.incrementDay(6).toMMMDD()}`
 }
 
 /**
