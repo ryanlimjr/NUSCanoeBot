@@ -1,3 +1,5 @@
+import { sheets_v4 } from '@googleapis/sheets'
+
 export type DayOfWeek =
   | 'Monday'
   | 'Tuesday'
@@ -38,6 +40,17 @@ export type CellRange = {
   /** right-most row (exclusive) */
   y2: number
 }
+
+export const toGridRange = (
+  range: CellRange,
+  sheetId: number
+): sheets_v4.Schema$GridRange => ({
+  sheetId,
+  startRowIndex: range.y1,
+  endRowIndex: range.y2,
+  startColumnIndex: range.x1,
+  endColumnIndex: range.x2,
+})
 
 export type AttendanceEntry = {
   /** excel serial date */

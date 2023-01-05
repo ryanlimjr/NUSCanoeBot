@@ -1,6 +1,6 @@
 import { sheets_v4 } from '@googleapis/sheets'
 import { Spreadsheet, SPREADSHEET_IDS, initCore } from './base'
-import { CellRange, daysOfWeek } from '../types'
+import { CellRange, daysOfWeek, toGridRange } from '../types'
 
 /**
  * Builds on top of the `Spreadsheet` class to form an ergonomic
@@ -56,25 +56,13 @@ export class AttendanceBuilder extends Spreadsheet {
             requests: [
               ...merges.map(
                 (range): sheets_v4.Schema$Request => ({
-                  mergeCells: {
-                    range: {
-                      sheetId,
-                      startRowIndex: range.y1,
-                      endRowIndex: range.y2,
-                      startColumnIndex: range.x1,
-                      endColumnIndex: range.x2,
-                    },
-                  },
+                  mergeCells: { range: toGridRange(range, sheetId) },
                 })
               ),
-              ...[row.AM, row.PM].map(
-                (row): sheets_v4.Schema$Request => ({
+              ...merges.map(
+                (range): sheets_v4.Schema$Request => ({
                   repeatCell: {
-                    range: {
-                      sheetId,
-                      startRowIndex: row,
-                      endRowIndex: row + 1,
-                    },
+                    range: toGridRange(range, sheetId),
                     cell: {
                       userEnteredFormat: {
                         horizontalAlignment: 'CENTER',
