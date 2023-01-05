@@ -1,5 +1,4 @@
 import { Spreadsheet, Attendance, TeamData } from './spreadsheet'
-import { attendanceSheetTitle } from './string'
 import { Date2 } from './date'
 import { MasterAttendance } from './spreadsheet/master-attendance'
 

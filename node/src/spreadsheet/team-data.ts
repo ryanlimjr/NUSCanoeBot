@@ -28,31 +28,19 @@ export class TeamData extends Spreadsheet {
    */
   async createDatabase(headers: string[]) {
     await this.deleteSheet(this.title).catch(console.log)
-    return (
-      this.addSheet(this.title, 2, headers.length, { type: 'team-data' })
-        .then((id) => this.moveSheetById(id, 2).then(() => id))
-        .then((sheetId) =>
-          this.core.spreadsheets.values
-            .update({
-              spreadsheetId: this.spreadsheetId,
-              range: this.title,
-              valueInputOption: 'RAW',
-              requestBody: { values: [headers] },
-            })
-            .then(() => sheetId)
-        )
-        // .then(() =>
-        //   this.appendRows(this.title, [
-        //     {
-        //       fullName: 'Nguyen Vu Khang',
-        //       nickname: 'khang',
-        //       birthday: Date2.from(2000, 6, 15).toExcelSerialNumber(),
-        //       shirtSize: 'M',
-        //     },
-        //   ])
-        // )
-        .then((id) => this.setDateColumn(this.title, 2).then(() => id))
-    )
+    return this.addSheet(this.title, 2, headers.length, { type: 'teamData' })
+      .then((id) => this.moveSheetById(id, 2).then(() => id))
+      .then((sheetId) =>
+        this.core.spreadsheets.values
+          .update({
+            spreadsheetId: this.spreadsheetId,
+            range: this.title,
+            valueInputOption: 'RAW',
+            requestBody: { values: [headers] },
+          })
+          .then(() => sheetId)
+      )
+      .then((id) => this.setDateColumn(this.title, 2).then(() => id))
   }
 
   /**
