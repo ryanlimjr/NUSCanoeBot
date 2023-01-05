@@ -1,4 +1,5 @@
 import { Spreadsheet } from './base'
-import { AttendanceBuilder } from './attendance-builder'
+import { Attendance } from './attendance'
+import { TeamData } from './team-data'
 
-export { AttendanceBuilder, Spreadsheet }
+export { Attendance, Spreadsheet, TeamData }

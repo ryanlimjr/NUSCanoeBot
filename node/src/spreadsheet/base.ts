@@ -1,10 +1,10 @@
-import { Sheet } from '../sheet'
 import { auth, sheets, sheets_v4 } from '@googleapis/sheets'
 import { join } from 'path'
+import { camelCaseify } from '../string'
 
 export const CREDENTIALS_PATH = join(process.cwd(), 'google-credentials.json')
 export const SPREADSHEET_IDS = {
-  main: '1W_mRwNhylC41bY6Hn5hmeRgUVpAdugsjHEwmoFtd2PM',
+  main: '1FGaXn4gvXpr6E-b4JO4O2pZk43jHpxvZHPJtN5SJc88',
 }
 
 /**
@@ -57,12 +57,47 @@ class SpreadsheetById {
     return this.core.spreadsheets
       .get({ spreadsheetId: this.spreadsheetId })
       .then((s) => {
-        // if (!s.data.namedRanges || s.data.namedRanges?.length === 0) {
-        //   console.log(Object.keys(s.data))
-        //   throw new Error('No named ranges')
-        // }
         return s.data.namedRanges || []
       })
+  }
+
+  /**
+   * Deletes all named ranges.
+   */
+  async clearNamedRanges() {
+    return this.listNamedRanges().then((namedRanges) =>
+      namedRanges.length > 0
+        ? this.core.spreadsheets.batchUpdate({
+            spreadsheetId: this.spreadsheetId,
+            requestBody: {
+              requests: namedRanges.map(
+                (r): sheets_v4.Schema$Request => ({
+                  deleteNamedRange: { namedRangeId: r.namedRangeId },
+                })
+              ),
+            },
+          })
+        : null
+    )
+  }
+
+  /**
+   * Delete rows starting from `startRow` (inclusive) to `endRow` (exclusive)
+   */
+  async deleteRowsById(sheetId: number, startIndex: number, endIndex: number) {
+    if (startIndex >= endIndex) return
+    return this.core.spreadsheets.batchUpdate({
+      spreadsheetId: this.spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: { sheetId, dimension: 'ROWS', startIndex, endIndex },
+            },
+          },
+        ],
+      },
+    })
   }
 
   /**
@@ -129,10 +164,7 @@ class SpreadsheetById {
               },
               cell: {
                 userEnteredFormat: {
-                  numberFormat: {
-                    type: 'DATE',
-                    pattern: 'dd-mm-yyyy',
-                  },
+                  numberFormat: { type: 'DATE', pattern: 'dd-mm-yyyy' },
                 },
               },
               fields: 'userEnteredFormat.numberFormat',
@@ -173,23 +205,6 @@ export class Spreadsheet extends SpreadsheetById {
   }
 
   /**
-   * Fetch data of one sheet, with an optional range.
-   * If no range is provided, then fetch the entire sheet.
-   *
-   * @param name the name of one sheet within the entire spreadsheet
-   * @param range the range of cells to take (e.g. `A2:F9`)
-   */
-  async getSheet<T extends Sheet>(
-    title: string,
-    sheetClass: new (data: any[][]) => T,
-    range?: string
-  ): Promise<T> {
-    return this.getSheetRaw(title, range).then(
-      (res) => new sheetClass(res.data.values || [])
-    )
-  }
-
-  /**
    * Obtains the sheet ID of a sheet by its title.
    */
   protected async getSheetId(
@@ -218,30 +233,54 @@ export class Spreadsheet extends SpreadsheetById {
   protected async addSheet(
     title: string,
     rowCount: number,
-    columnCount: number
+    columnCount: number,
+    developerMetadata?: Record<string, string>
   ): Promise<number> {
     const properties = { title, gridProperties: { rowCount, columnCount } }
-    return this.core.spreadsheets
-      .batchUpdate({
-        spreadsheetId: this.spreadsheetId,
-        requestBody: {
-          requests: [{ addSheet: { properties } }],
-          includeSpreadsheetInResponse: true,
-        },
-      })
-      .then(
-        (response) =>
-          new Promise((resolve, reject) => {
-            const spreadsheet = response.data.updatedSpreadsheet
-            if (!spreadsheet)
-              return reject('Spreadsheet not updated. No sheet created.')
-            if (!spreadsheet.sheets)
-              return reject('No sheets found or created.')
-            const sheetId = this.getSheetId(title, spreadsheet.sheets)
-            if (!sheetId) return reject(`Sheet ${title} has no ID.`)
-            return resolve(sheetId)
-          })
-      )
+    const create = this.core.spreadsheets.batchUpdate({
+      spreadsheetId: this.spreadsheetId,
+      requestBody: {
+        requests: [{ addSheet: { properties } }],
+        includeSpreadsheetInResponse: true,
+      },
+    })
+    const getId = create.then(
+      (response): Promise<number> =>
+        new Promise((resolve, reject) => {
+          const spreadsheet = response.data.updatedSpreadsheet
+          if (!spreadsheet)
+            return reject('Spreadsheet not updated. No sheet created.')
+          if (!spreadsheet.sheets) return reject('No sheets found or created.')
+          const sheetId = this.getSheetId(title, spreadsheet.sheets)
+          if (!sheetId) return reject(`Sheet ${title} has no ID.`)
+          return resolve(sheetId)
+        })
+    )
+    if (!developerMetadata) return getId
+
+    return getId.then((sheetId) =>
+      this.core.spreadsheets
+        .batchUpdate({
+          spreadsheetId: this.spreadsheetId,
+          requestBody: {
+            requests: [
+              ...Object.entries(developerMetadata).map(
+                ([key, value]): sheets_v4.Schema$Request => ({
+                  createDeveloperMetadata: {
+                    developerMetadata: {
+                      metadataKey: key,
+                      metadataValue: value,
+                      visibility: 'PROJECT',
+                      location: { sheetId },
+                    },
+                  },
+                })
+              ),
+            ],
+          },
+        })
+        .then(() => sheetId)
+    )
   }
 
   /**
@@ -261,10 +300,9 @@ export class Spreadsheet extends SpreadsheetById {
   async appendRows(title: string, data: Record<string, any>[]) {
     return this.getSheetRaw(title)
       .then((raw) => {
-        const sheet = new Sheet(raw.data.values || [])
-        const headers = sheet.getHeaders()
-        const newRows = data.map((row) => headers.map((key) => row[key]))
-        return newRows
+        const sheet = raw.data.values || []
+        const headers = sheet[0].map((v) => camelCaseify(`${v}`))
+        return data.map((row) => headers.map((key) => row[key]))
       })
       .then((values) =>
         this.core.spreadsheets.values.append({

@@ -1,3 +1,4 @@
+import { Date2 } from './date'
 import { DayOfWeek, daysOfWeek, Session } from './types'
 
 /**
@@ -31,25 +32,24 @@ export function parseTrainingDay(line: string): [DayOfWeek, Session] {
     throw new Error('Use isTrainingDay to check if line is a training first.')
   }
   const [dayOfWeek, session] = line.split(' ')
-  return [dayOfWeek as DayOfWeek, session === '(AM)' ? 'Morning' : 'Afternoon']
+  return [dayOfWeek as DayOfWeek, session === '(AM)' ? 'AM' : 'PM']
 }
 
 /**
- * Converts the excel serialized date number (1 Jan 2023 is 44927)
+ * Standard titles for all attendance sheets, generated from the monday that
+ * that week starts with.
  */
-export function excelSerialDate(serialNumber: number): Date {
-  return new Date(Math.round((serialNumber - 25569) * 86400 * 1000))
+export function attendanceSheetTitle(monday: Date2): string {
+  // assert that the date provided is in fact a monday
+  if (!monday.isMonday()) {
+    throw new Error(`${monday} should be a Monday.`)
+  }
+  return `A(${monday.toMMMDD()} - ${monday.incrementDay(6).toMMMDD()})`
 }
 
 /**
- * The one source of truth for human-readable date formats in this project.
+ * Standard named range name for a training that happened on `date`, `session`
  */
-export function toStandardDate(date: Date, dayOffset?: number): string {
-  const inner = new Date(date)
-  inner.setDate(inner.getDate() + (dayOffset || 0))
-  return inner.toLocaleDateString('en-sg', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
+export function namedRange(date: Date2, session: Session) {
+  return `T.${date.toDDMMYYYY('.')}.${session}`
 }
