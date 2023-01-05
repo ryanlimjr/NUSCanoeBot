@@ -40,3 +40,16 @@ export function parseTrainingDay(line: string): [DayOfWeek, Session] {
 export function excelSerialDate(serialNumber: number): Date {
   return new Date(Math.round((serialNumber - 25569) * 86400 * 1000))
 }
+
+/**
+ * The one source of truth for human-readable date formats in this project.
+ */
+export function toStandardDate(date: Date, dayOffset?: number): string {
+  const inner = new Date(date)
+  inner.setDate(inner.getDate() + (dayOffset || 0))
+  return inner.toLocaleDateString('en-sg', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+}

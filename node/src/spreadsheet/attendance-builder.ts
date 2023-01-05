@@ -1,6 +1,7 @@
 import { sheets_v4 } from '@googleapis/sheets'
 import { Spreadsheet, SPREADSHEET_IDS, initCore } from './base'
-import { CellRange, daysOfWeek, toGridRange } from '../types'
+import { CellRange, daysOfWeek, toGridRange, Session } from '../types'
+import { toStandardDate } from '../string'
 
 /**
  * Builds on top of the `Spreadsheet` class to form an ergonomic
@@ -20,7 +21,14 @@ export class AttendanceBuilder extends Spreadsheet {
     return initCore().then((core) => new AttendanceBuilder(core, id))
   }
 
-  async __createAttendance__(title: string) {
+  async __createAttendance__(title: string, monday: Date) {
+    // check if the monday provided is in fact a monday
+    if (monday.getDay() !== 0) {
+      throw new Error(
+        `${monday.toLocaleDateString('en-sg')} should be a Monday.`
+      )
+    }
+
     const height = 100
     const width = 21
     const values = Array.apply(null, Array(height)).map(() =>
@@ -28,6 +36,9 @@ export class AttendanceBuilder extends Spreadsheet {
     )
     const merges: CellRange[] = []
     const namedRanges: [string, CellRange][] = []
+
+    const namedRange = (d: Date, offset: number, session: string) =>
+      `T.${toStandardDate(d, offset).replace(/\//g, '.')}.${session}`
 
     const row = { AM: 10, PM: 50 }
     daysOfWeek
@@ -37,7 +48,7 @@ export class AttendanceBuilder extends Spreadsheet {
         values[row.AM][x] = `${day} (AM)`
         merges.push({ x1: x, x2: x + 3, y1: row.AM, y2: row.AM + 1 })
         namedRanges.push([
-          `${day}.AM`,
+          namedRange(monday, idx, 'AM'),
           { x1: x, x2: x + 3, y1: row.AM, y2: row.PM },
         ])
 
@@ -46,7 +57,7 @@ export class AttendanceBuilder extends Spreadsheet {
           values[row.PM][x] = `${day} (PM)`
           merges.push({ x1: x, x2: x + 3, y1: row.PM, y2: row.PM + 1 })
           namedRanges.push([
-            `${day}.PM`,
+            namedRange(monday, idx, 'PM'),
             { x1: x, x2: x + 3, y1: row.PM, y2: height },
           ])
         }

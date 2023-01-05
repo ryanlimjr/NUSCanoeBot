@@ -50,7 +50,9 @@ async function main() {
   const sheets = await AttendanceBuilder.init()
   await sheets
     .deleteSheet('__weekly__')
-    .then(() => sheets.__createAttendance__('__weekly__'))
+    .then(() =>
+      sheets.__createAttendance__('__weekly__', new Date('8 Jan 2023'))
+    )
     .then(() => sheets.moveToFront('__weekly__'))
     .catch((e) => console.log('MAIN LOOP', e))
 
