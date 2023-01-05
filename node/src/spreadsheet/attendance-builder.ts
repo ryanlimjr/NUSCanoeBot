@@ -1,20 +1,23 @@
 import { sheets_v4 } from '@googleapis/sheets'
-import { Spreadsheet } from '.'
+import { Spreadsheet, SPREADSHEET_IDS, initCore } from './base'
 import { CellRange, daysOfWeek } from '../types'
-import { SpreadsheetById } from './id-operations'
 
+/**
+ * Builds on top of the `Spreadsheet` class to form an ergonomic
+ * builder for the weekly attendance sheet.
+ */
 export class AttendanceBuilder extends Spreadsheet {
   constructor(core: sheets_v4.Sheets, spreadsheetId: string) {
     super(core, spreadsheetId)
   }
 
+  /**
+   * Authenticate with Google Sheets API and initialize
+   * `AttendanceBuilder`
+   */
   public static async init(spreadsheetId?: string): Promise<AttendanceBuilder> {
-    const id = spreadsheetId
-      ? spreadsheetId
-      : SpreadsheetById.SPREADSHEET_IDS.main
-    return SpreadsheetById.initCore().then(
-      (core) => new AttendanceBuilder(core, id)
-    )
+    const id = spreadsheetId ? spreadsheetId : SPREADSHEET_IDS.main
+    return initCore().then((core) => new AttendanceBuilder(core, id))
   }
 
   async __createAttendance__(title: string) {

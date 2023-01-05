@@ -1,6 +1,5 @@
 import { TeamDataSheet, AttendanceSheet } from './sheet'
-import { Spreadsheet } from './spreadsheet'
-import { AttendanceBuilder } from './spreadsheet/build-attendance'
+import { Spreadsheet, AttendanceBuilder } from './spreadsheet'
 
 export async function initializeUserDatabase(sheets: Spreadsheet) {
   const sheetTitle = 'user-database'
