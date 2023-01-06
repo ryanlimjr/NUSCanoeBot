@@ -28,27 +28,34 @@ export type TeamMember = {
   shirtSize?: string
 }
 
-export type CellRange = {
-  /** left-most column (inclusive) */
-  x1: number
-  /** right-most column (exclusive) */
-  x2: number
-  /** top-most row (inclusive) */
-  y1: number
-  /** bottom-most row (exclusive) */
-  y2: number
-}
 
-export const toGridRange = (
-  range: CellRange,
-  sheetId: number
-): sheets_v4.Schema$GridRange => ({
-  sheetId,
-  startRowIndex: range.y1,
-  endRowIndex: range.y2,
-  startColumnIndex: range.x1,
-  endColumnIndex: range.x2,
-})
+export class GridRange {
+  // startRow, endRow, startCol, endCol
+  r: [number, number, number, number]
+
+  constructor({ y1 = 0, y2 = 0, x1 = 0, x2 = 0 }) {
+    this.r = [y1, y2, x1, x2]
+  }
+
+  shift({ y1 = 0, y2 = 0, x1 = 0, x2 = 0 }) {
+    return new GridRange({
+      y1: y1 + this.r[0],
+      y2: y2 + this.r[1],
+      x1: x1 + this.r[2],
+      x2: x2 + this.r[3],
+    })
+  }
+
+  toGridRange(sheetId?: number): sheets_v4.Schema$GridRange {
+    return {
+      sheetId,
+      startRowIndex: this.r[0],
+      endRowIndex: this.r[1],
+      startColumnIndex: this.r[2],
+      endColumnIndex: this.r[3],
+    }
+  }
+}
 
 export type AttendanceEntry = {
   /** excel serial date */

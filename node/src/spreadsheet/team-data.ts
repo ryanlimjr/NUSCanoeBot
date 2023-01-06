@@ -1,4 +1,5 @@
 import { sheets_v4 } from '@googleapis/sheets'
+import { Builder } from '../builder'
 import { Date2 } from '../date'
 import { camelCaseify } from '../string'
 import { TeamMember, validate } from '../types'
@@ -24,35 +25,40 @@ export class TeamData extends Spreadsheet {
   private title = 'Team Data'
 
   /**
-   * Initializes the team's data store.
+   * Initializes the team's data store
    */
   async createDatabase(headers: string[]) {
-    await this.deleteSheet(this.title).catch(console.log)
-    return this.addSheet(this.title, 2, headers.length, { type: 'teamData' })
-      .then((id) => this.moveSheetById(id, 2).then(() => id))
-      .then((sheetId) =>
-        this.core.spreadsheets.values
-          .update({
-            spreadsheetId: this.spreadsheetId,
-            range: this.title,
-            valueInputOption: 'RAW',
-            requestBody: { values: [headers] },
-          })
-          .then(() => sheetId)
+    const metadata = { type: 'teamData' }
+    return this.addSheet(this.title, 2, headers.length, metadata)
+      .then((id) => {
+        const builder = new Builder(id)
+        builder.moveToIndex(2)
+        builder.setDateColumn(2)
+        return builder.execute(this.core, this.spreadsheetId)
+      })
+      .then(() =>
+        this.core.spreadsheets.values.update({
+          spreadsheetId: this.spreadsheetId,
+          range: this.title,
+          valueInputOption: 'RAW',
+          requestBody: { values: [headers] },
+        })
       )
-      .then((id) => this.setDateColumn(this.title, 2).then(() => id))
   }
 
   /**
    * Sanitizes the team's data store.
    */
   async sanitize() {
-    return this.getSheetRaw(this.title).then((res) => {
-      const values = res.data.values || []
+    const getSheet = this.getSheet(this.title)
+    const getId = this.getSheetId(this.title)
+    return Promise.all([getSheet, getId]).then(async ([sheet, sheetId]) => {
+      const values = sheet.data.values || []
       const headers = values[0].map((v) => `${v}`.toLowerCase())
-
       if (!headers) throw new Error('Team Data sheet has no headers.')
-      return this.setDateColumn(this.title, headers.indexOf('birthday'))
+      const builder = new Builder(sheetId)
+      builder.setDateColumn(headers.indexOf('birthday'))
+      return builder.execute(this.core, this.spreadsheetId)
     })
   }
 
@@ -60,7 +66,7 @@ export class TeamData extends Spreadsheet {
    * Fetches team data and returns a list of `TeamMember` entries.
    */
   async getTeamData(): Promise<TeamMember[]> {
-    return this.getSheetRaw(this.title).then((res) => {
+    return this.getSheet(this.title).then((res) => {
       const result: TeamMember[] = []
       if (!res.data.values) return result
       const firstRow = res.data.values.shift()

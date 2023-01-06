@@ -29,7 +29,7 @@ export async function initCore(keyFile?: string): Promise<sheets_v4.Sheets> {
 /**
  * Relatively low-level sheet operations that rely on having the ID
  */
-class SpreadsheetById {
+export class Spreadsheet {
   protected core: sheets_v4.Sheets
   protected spreadsheetId: string
   protected serviceEmail = SERVICE_EMAIL
@@ -63,106 +63,34 @@ class SpreadsheetById {
   }
 
   /**
-   * Delete rows starting from `startRow` (inclusive) to `endRow` (exclusive)
+   * Operations done by id.
    */
-  async deleteRowsById(sheetId: number, startIndex: number, endIndex: number) {
-    if (startIndex >= endIndex) return
-    return this.core.spreadsheets.batchUpdate({
-      spreadsheetId: this.spreadsheetId,
-      requestBody: {
-        requests: [
-          {
-            deleteDimension: {
-              range: { sheetId, dimension: 'ROWS', startIndex, endIndex },
-            },
-          },
-        ],
-      },
-    })
-  }
-
-  /**
-   * Deletes one sheet but its id.
-   */
-  protected async deleteSheetById(sheetId: number) {
-    // delete related named ranges so none are left hanging
-    const getNamedRangeIds = this.listNamedRanges().then((ranges) =>
-      ranges
-        .filter((range) => range.range?.sheetId === sheetId)
-        .map((r) => r.namedRangeId || '')
-        .filter((id) => id.length > 0)
-    )
-    return getNamedRangeIds.then((namedRangeIds) =>
-      this.core.spreadsheets.batchUpdate({
-        spreadsheetId: this.spreadsheetId,
-        requestBody: {
-          requests: [
-            ...namedRangeIds.map(
-              (id): sheets_v4.Schema$Request => ({
+  protected byId = {
+    /**
+     * Deletes one sheet but its id. Also delete related named ranges so
+     * none are left hanging
+     */
+    deleteSheet: async (sheetId: number) => {
+      const getNamedRangeIds = this.listNamedRanges().then((ranges) =>
+        ranges
+          .filter((range) => range.range?.sheetId === sheetId)
+          .map((r) => r.namedRangeId || '')
+          .filter((id) => id.length > 0)
+      )
+      return getNamedRangeIds.then((namedRangeIds) =>
+        this.core.spreadsheets.batchUpdate({
+          spreadsheetId: this.spreadsheetId,
+          requestBody: {
+            requests: [
+              ...namedRangeIds.map((id) => ({
                 deleteNamedRange: { namedRangeId: id },
-              })
-            ),
-            { deleteSheet: { sheetId } },
-          ],
-        },
-      })
-    )
-  }
-
-  /**
-   * Moves sheet with ID of `sheetId` to index `index`. Use an index
-   * of 1 to move it to the front.
-   */
-  protected async moveSheetById(sheetId: number, index: number) {
-    const move = {
-      updateSheetProperties: {
-        properties: { sheetId, index },
-        fields: 'index',
-      },
-    }
-    return this.core.spreadsheets.batchUpdate({
-      spreadsheetId: this.spreadsheetId,
-      requestBody: { requests: [move] },
-    })
-  }
-
-  /**
-   * In the sheet titled `title`, find the column with header
-   * `matchHeader` and set its formatting to DD-MM-YYYY
-   */
-  async setDateColumnById(sheetId: number, column: number) {
-    return this.core.spreadsheets.batchUpdate({
-      spreadsheetId: this.spreadsheetId,
-      requestBody: {
-        requests: [
-          {
-            repeatCell: {
-              range: {
-                sheetId,
-                startRowIndex: 0,
-                startColumnIndex: column,
-                endColumnIndex: column + 1,
-              },
-              cell: {
-                userEnteredFormat: {
-                  numberFormat: { type: 'DATE', pattern: 'dd-mm-yyyy' },
-                },
-              },
-              fields: 'userEnteredFormat.numberFormat',
-            },
+              })),
+              { deleteSheet: { sheetId } },
+            ],
           },
-        ],
-      },
-    })
-  }
-}
-
-export class Spreadsheet extends SpreadsheetById {
-  /**
-   * Initialize a new Sheets instance
-   */
-  protected constructor(core: sheets_v4.Sheets, spreadsheetId: string) {
-    super(core, spreadsheetId)
+        })
+      )
+    },
   }
 
   /**
@@ -176,13 +104,33 @@ export class Spreadsheet extends SpreadsheetById {
   /**
    * Gets a raw sheet.
    */
-  protected getSheetRaw(title: string, range?: string) {
+  protected getSheet(title: string, range?: string) {
     return this.core.spreadsheets.values.get({
       spreadsheetId: this.spreadsheetId,
       range: range ? `${title}!${range}` : title,
       valueRenderOption: 'UNFORMATTED_VALUE',
       dateTimeRenderOption: 'SERIAL_NUMBER',
     })
+  }
+
+  /**
+   * Creates a sheet called `.anchor` and deletes every other sheet.
+   */
+  async resetSpreadsheet() {
+    await this.deleteSheet('.anchor').catch(() => {})
+    return this.addSheet('.anchor', 1, 1)
+      .then((anchorId) =>
+        this.listSheets().then((sheets) => ({ sheets, anchorId }))
+      )
+      .then(({ sheets, anchorId }) => {
+        const sheetIds: number[] = []
+        sheets.forEach((s) => {
+          const id = s.properties?.sheetId
+          if (!id || id === anchorId) return
+          sheetIds.push(id)
+        })
+        return Promise.all(sheetIds.map(this.byId.deleteSheet))
+      })
   }
 
   /**
@@ -225,18 +173,15 @@ export class Spreadsheet extends SpreadsheetById {
         includeSpreadsheetInResponse: true,
       },
     })
-    const getId = create.then(
-      (response): Promise<number> =>
-        new Promise((resolve, reject) => {
-          const spreadsheet = response.data.updatedSpreadsheet
-          if (!spreadsheet)
-            return reject('Spreadsheet not updated. No sheet created.')
-          if (!spreadsheet.sheets) return reject('No sheets found or created.')
-          const sheetId = this.getSheetId(title, spreadsheet.sheets)
-          if (!sheetId) return reject(`Sheet ${title} has no ID.`)
-          return resolve(sheetId)
-        })
-    )
+    const getId = create.then((response) => {
+      const spreadsheet = response.data.updatedSpreadsheet
+      if (!spreadsheet)
+        throw new Error('Spreadsheet not updated. No sheet created.')
+      if (!spreadsheet.sheets) throw new Error('No sheets found or created.')
+      const sheetId = this.getSheetId(title, spreadsheet.sheets)
+      if (!sheetId) throw new Error(`Sheet ${title} has no ID.`)
+      return sheetId
+    })
     if (!developerMetadata) return getId
 
     return getId.then((sheetId) =>
@@ -310,36 +255,21 @@ export class Spreadsheet extends SpreadsheetById {
   }
 
   /**
-   * Set metadata of a sheet by id.
+   * Get all developer metadata
    */
-  async setMetadataById(sheetId: number, key: string, value: string) {
-    return this.core.spreadsheets.batchUpdate({
-      spreadsheetId: this.spreadsheetId,
-      requestBody: {
-        requests: [
-          {
-            createDeveloperMetadata: {
-              developerMetadata: {
-                location: { sheetId },
-                metadataKey: key,
-                metadataValue: value,
-                visibility: 'PROJECT',
-              },
-            },
-          },
-        ],
-      },
-    })
-  }
-
-  /**
-   * Creates a new sheet and moves it to the front, such that it is
-   * visible immediately to the Google Sheet's front-end user.
-   */
-  async addSheetToFront(title: string, rowCount: number, columnCount: number) {
-    return this.addSheet(title, rowCount, columnCount).then((sheetId) =>
-      this.moveSheetById(sheetId, 1)
-    )
+  async listSpreadsheetMetadata() {
+    return this.core.spreadsheets
+      .get({
+        spreadsheetId: this.spreadsheetId,
+      })
+      .then((ss) => {
+        const sheets = ss.data.sheets || []
+        return sheets.map((v) => ({
+          title: v.properties?.title,
+          sheetId: v.properties?.sheetId,
+          metadata: v.developerMetadata,
+        }))
+      })
   }
 
   /**
@@ -349,7 +279,7 @@ export class Spreadsheet extends SpreadsheetById {
    * Returns number of rows in the sheet
    */
   async appendRows(title: string, data: Record<string, any>[]) {
-    return this.getSheetRaw(title)
+    return this.getSheet(title)
       .then((raw) => {
         const sheet = raw.data.values || []
         const headers = sheet[0].map((v) => camelCaseify(`${v}`))
@@ -384,28 +314,11 @@ export class Spreadsheet extends SpreadsheetById {
   }
 
   /**
-   * In the sheet titled `title`, find the column with header
-   * `matchHeader` and set its formatting to DD-MM-YYYY
-   */
-  async setDateColumn(title: string, column: number) {
-    return this.getSheetId(title).then((sheetId) =>
-      this.setDateColumnById(sheetId, column)
-    )
-  }
-
-  /**
    * Deletes one sheet by its title.
    */
   async deleteSheet(title: string) {
     return this.getSheetId(title)
-      .then((sheetId) => this.deleteSheetById(sheetId))
+      .then((sheetId) => this.byId.deleteSheet(sheetId))
       .catch((err) => console.log(`[DELETE SHEET]: ${err}`))
-  }
-
-  /**
-   * Moves a sheet to the front.
-   */
-  async moveToFront(title: string) {
-    return this.getSheetId(title).then((id) => this.moveSheetById(id, 1))
   }
 }

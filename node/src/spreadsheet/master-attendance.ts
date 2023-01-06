@@ -1,9 +1,10 @@
 import { sheets_v4 } from '@googleapis/sheets'
 import { Spreadsheet, SPREADSHEET_IDS, initCore } from './base'
-import { AttendanceEntry, validate } from '../types'
+import { validate } from '../types'
 import { camelCaseify } from '../string'
 import { Date2 } from '../date'
 import { Attendance } from './attendance'
+import { Builder } from '../builder'
 
 /**
  * Builds on top of the `Spreadsheet` class to form an ergonomic
@@ -57,7 +58,7 @@ export class MasterAttendance extends Spreadsheet {
    * trainings from the week starting with `monday`
    */
   async getCurrent(monday: Date2): Promise<[number, number]> {
-    return this.getSheetRaw(this.title).then((sheet) => {
+    return this.getSheet(this.title).then((sheet) => {
       const values = sheet.data.values || []
       if (!values[0]) throw new Error('Master Attendance list has no headers.')
       const headers = values[0].map(camelCaseify)
@@ -91,49 +92,50 @@ export class MasterAttendance extends Spreadsheet {
    * Cleans up the database without changing its data.
    */
   async sanitize() {
-    const dateCol = this.headers.indexOf('Date')
-    return this.setDateColumn(this.title, this.headers.indexOf('Date'))
-      .then(() => this.getSheetId(this.title))
-      .then((sheetId) =>
-        this.core.spreadsheets.batchUpdate({
-          spreadsheetId: this.spreadsheetId,
-          requestBody: {
-            requests: [
-              {
-                repeatCell: {
-                  range: {
-                    sheetId,
-                    startRowIndex: 0,
-                    startColumnIndex: dateCol,
-                    endColumnIndex: dateCol + 1,
-                  },
-                  cell: {
-                    userEnteredFormat: {
-                      numberFormat: { type: 'DATE', pattern: 'dd/mm/yyyy' },
-                    },
-                  },
-                  fields: 'userEnteredFormat.numberFormat',
-                },
-              },
-              {
-                sortRange: {
-                  range: { sheetId, startRowIndex: 1 },
-                  sortSpecs: [
-                    {
-                      sortOrder: 'ASCENDING',
-                      dimensionIndex: this.headers.indexOf('Date'),
-                    },
-                    {
-                      sortOrder: 'ASCENDING',
-                      dimensionIndex: this.headers.indexOf('Nickname'),
-                    },
-                  ],
-                },
-              },
-            ],
-          },
-        })
-      )
+    // TODO: use builder here
+    // const dateCol = this.headers.indexOf('Date')
+    // return this.setDateColumn(this.title, this.headers.indexOf('Date'))
+    //   .then(() => this.getSheetId(this.title))
+    //   .then((sheetId) =>
+    //     this.batchUpdate({
+    //       spreadsheetId: this.spreadsheetId,
+    //       requestBody: {
+    //         requests: [
+    //           {
+    //             repeatCell: {
+    //               range: {
+    //                 sheetId,
+    //                 startRowIndex: 0,
+    //                 startColumnIndex: dateCol,
+    //                 endColumnIndex: dateCol + 1,
+    //               },
+    //               cell: {
+    //                 userEnteredFormat: {
+    //                   numberFormat: { type: 'DATE', pattern: 'dd/mm/yyyy' },
+    //                 },
+    //               },
+    //               fields: 'userEnteredFormat.numberFormat',
+    //             },
+    //           },
+    //           {
+    //             sortRange: {
+    //               range: { sheetId, startRowIndex: 1 },
+    //               sortSpecs: [
+    //                 {
+    //                   sortOrder: 'ASCENDING',
+    //                   dimensionIndex: this.headers.indexOf('Date'),
+    //                 },
+    //                 {
+    //                   sortOrder: 'ASCENDING',
+    //                   dimensionIndex: this.headers.indexOf('Nickname'),
+    //                 },
+    //               ],
+    //             },
+    //           },
+    //         ],
+    //       },
+    //     })
+    //   )
   }
 
   /**
@@ -144,7 +146,11 @@ export class MasterAttendance extends Spreadsheet {
     return Promise.all([
       this.getCurrent(monday),
       this.getSheetId(this.title),
-    ]).then(([[start, end], id]) => this.deleteRowsById(id, start, end))
+    ]).then(([[start, end], id]) => {
+      const builder = new Builder(id)
+      builder.deleteRows(start, end)
+      return builder.execute(this.core, this.spreadsheetId)
+    })
   }
 
   /**

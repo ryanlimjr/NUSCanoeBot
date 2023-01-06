@@ -14,3 +14,10 @@ export function assertHas(array: any[], element: any) {
     throw new Error(`Array ${array} must contain ${element}`)
   }
 }
+
+/**
+ * Returns a 2D array filled with `elem`
+ */
+export function grid<T>(elem: T, height: number, width: number) {
+  return Array.apply(null, Array(height)).map(() => Array(width).fill(elem))
+}

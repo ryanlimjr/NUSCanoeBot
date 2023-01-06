@@ -1,12 +1,12 @@
 import type { sheets_v4 } from '@googleapis/sheets'
-import { Date2 } from '../../date'
-import { namedRange } from '../../string'
-import { CellRange, Session, TeamMember, toGridRange } from '../../types'
+import { Date2 } from './date'
+import { namedRange } from './string'
+import { GridRange, Session, TeamMember } from './types'
 
 export type TrainingRange = {
   date: Date2
   session: Session
-  range: CellRange
+  range: GridRange
 }
 
 /**
@@ -21,8 +21,29 @@ export class Builder {
     this.requests = []
   }
 
-  private toGridRange(range: CellRange, sheetId = this.sheetId) {
-    return toGridRange(range, sheetId)
+  private toGridRange = (range: GridRange, sheetId = this.sheetId) =>
+    range.toGridRange(sheetId)
+
+  /**
+   * Set row height/column width
+   */
+  setDimensionSize(
+    dimension: 'ROWS' | 'COLUMNS',
+    index: number,
+    pixelSize: number
+  ) {
+    this.requests.push({
+      updateDimensionProperties: {
+        range: {
+          sheetId: this.sheetId,
+          dimension,
+          startIndex: index,
+          endIndex: index + 1,
+        },
+        properties: { pixelSize },
+        fields: 'pixelSize',
+      },
+    })
   }
 
   /**
@@ -75,20 +96,21 @@ export class Builder {
   }
 
   /**
-   * Merge the range, bold it and center the text.
+   * Merge the range.
    */
-  mergeBoldCenter(range: CellRange) {
+  merge(range: GridRange) {
     this.requests.push({ mergeCells: { range: this.toGridRange(range) } })
+  }
+
+  /**
+   * Center the text in the range.
+   */
+  center(range: GridRange) {
     this.requests.push({
       repeatCell: {
         range: this.toGridRange(range),
-        cell: {
-          userEnteredFormat: {
-            horizontalAlignment: 'CENTER',
-            textFormat: { bold: true },
-          },
-        },
-        fields: 'userEnteredFormat(textFormat,horizontalAlignment)',
+        cell: { userEnteredFormat: { horizontalAlignment: 'CENTER' } },
+        fields: 'userEnteredFormat.horizontalAlignment',
       },
     })
   }
@@ -96,7 +118,7 @@ export class Builder {
   /**
    * Bold all text in the range.
    */
-  bold(range: CellRange) {
+  bold(range: GridRange) {
     this.requests.push({
       repeatCell: {
         range: this.toGridRange(range),
@@ -145,7 +167,7 @@ export class Builder {
   /**
    * Copy the `range` of cells from the template sheet.
    */
-  loadTemplate(templateSheetId: number, range: CellRange) {
+  loadTemplate(templateSheetId: number, range: GridRange) {
     this.requests.push({
       copyPaste: {
         source: this.toGridRange(range, templateSheetId),
@@ -159,8 +181,7 @@ export class Builder {
   /**
    * Criss-cross the range with borders.
    */
-  allBorder(trainingRange: TrainingRange) {
-    const range = { ...trainingRange.range, y1: trainingRange.range.y1 - 3 }
+  allBorder(range: GridRange) {
     const gray = 0.3
     const borderStyle = {
       style: 'SOLID',
@@ -183,7 +204,7 @@ export class Builder {
    * Add a nickname validator to the training range.
    */
   validateNicknames(trainingRange: TrainingRange, team: TeamMember[]) {
-    const range = { ...trainingRange.range, x2: trainingRange.range.x1 + 1 }
+    const range = trainingRange.range.shift({ x2: -2 })
     this.requests.push({
       setDataValidation: {
         range: this.toGridRange(range),
@@ -207,7 +228,7 @@ export class Builder {
    * named range will not be deleted. This is a limitation of Google
    * Sheets API.
    */
-  async deleteNamedRange(namedRangeId: string) {
+  deleteNamedRange(namedRangeId: string) {
     this.requests.push({ deleteNamedRange: { namedRangeId } })
   }
 
@@ -216,7 +237,7 @@ export class Builder {
    * deleteRows(1, 4) will delete the visual rows 2, 3, and 4. (Google
    * Sheets' GUI is 1-indexed)
    */
-  async deleteRows(startIndex: number, endIndex: number) {
+  deleteRows(startIndex: number, endIndex: number) {
     if (startIndex >= endIndex) return
     this.requests.push({
       deleteDimension: {
@@ -231,9 +252,59 @@ export class Builder {
   }
 
   /**
+   * Set metadata key-value pair of a sheet.
+   */
+  setMetadata(key: string, value: string) {
+    this.requests.push({
+      createDeveloperMetadata: {
+        developerMetadata: {
+          location: { sheetId: this.sheetId },
+          metadataKey: key,
+          metadataValue: value,
+          visibility: 'PROJECT',
+        },
+      },
+    })
+  }
+
+  /**
+   * Moves sheet with ID of `sheetId` to index `index`. Use an index
+   * of 1 to move it to the front.
+   */
+  moveToIndex(index: number) {
+    this.requests.push({
+      updateSheetProperties: {
+        properties: { sheetId: this.sheetId, index },
+        fields: 'index',
+      },
+    })
+  }
+
+  /**
+   * In the sheet titled `title`, find the column with header
+   * `matchHeader` and set its formatting to `pattern` (e.g. `dd-mm-yyyy`)
+   */
+  async setDateColumn(column: number, pattern = 'dd-mm-yyyy') {
+    this.requests.push({
+      repeatCell: {
+        range: {
+          sheetId: this.sheetId,
+          startRowIndex: 0,
+          startColumnIndex: column,
+          endColumnIndex: column + 1,
+        },
+        cell: {
+          userEnteredFormat: { numberFormat: { type: 'DATE', pattern } },
+        },
+        fields: 'userEnteredFormat.numberFormat',
+      },
+    })
+  }
+
+  /**
    * Build it and ship it.
    */
-  async build(core: sheets_v4.Sheets, spreadsheetId: string) {
+  async execute(core: sheets_v4.Sheets, spreadsheetId: string) {
     return core.spreadsheets.batchUpdate({
       spreadsheetId,
       requestBody: { requests: this.requests },

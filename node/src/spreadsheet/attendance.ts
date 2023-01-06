@@ -1,16 +1,17 @@
 import { sheets_v4 } from '@googleapis/sheets'
-import { Spreadsheet, SPREADSHEET_IDS, initCore } from '../base'
+import { Spreadsheet, SPREADSHEET_IDS, initCore } from './base'
 import {
   AttendanceEntry,
-  CellRange,
+  GridRange,
   DayOfWeek,
   daysOfWeek,
   TeamMember,
   Session,
-} from '../../types'
-import { attendanceSheetTitle, namedRange } from '../../string'
-import { Date2 } from '../../date'
-import { Builder, TrainingRange } from './builder'
+} from '../types'
+import { attendanceSheetTitle, namedRange } from '../string'
+import { Date2 } from '../date'
+import { Builder, TrainingRange } from '../builder'
+import { grid, range } from '../array'
 
 const trainingDays: { day: DayOfWeek; session: Session }[] = [
   // Days with Morning Training
@@ -59,6 +60,54 @@ export class Attendance extends Spreadsheet {
   }
 
   /**
+   * Creates a template sheet to build attendance sheets from. These
+   * are precisely 11 cells in height and 21 + 1 cells wide.
+   */
+  async createTemplate(data: (string | null)[][] = []) {
+    const template = grid(null, 11, 21)
+    for (let i = 0; i < template.length && i < data.length; i++) {
+      for (let j = 0; j < template[i].length && j < data[i].length; j++) {
+        template[i][j] = data[i][j]
+      }
+    }
+    daysOfWeek.forEach((day, idx) => (template[10][idx * 3] = `${day} (AM)`))
+    return this.addSheet(this.TEMPLATE_TITLE, 11, 22, {
+      type: 'attendanceTemplate',
+    })
+      .then(() =>
+        this.core.spreadsheets.values.update({
+          spreadsheetId: this.spreadsheetId,
+          range: this.TEMPLATE_TITLE,
+          valueInputOption: 'RAW',
+          requestBody: { values: template },
+        })
+      )
+      .then(() => this.formatTemplate())
+  }
+
+  /**
+   * Formats the template
+   */
+  async formatTemplate() {
+    return this.getSheetId(this.TEMPLATE_TITLE).then((sheetId) => {
+      const builder = new Builder(sheetId)
+      builder.lockColumn(this.serviceEmail, 21)
+      builder.lockRows(this.serviceEmail, [10])
+      builder.setDimensionSize('ROWS', 9, 32)
+      range(0, 7)
+        .map((i) => new GridRange({ x1: i * 3, x2: i * 3 + 3, y1: 10, y2: 11 }))
+        .forEach((r) => {
+          builder.merge(r)
+          builder.merge(r.shift({ y1: -1, y2: -1 }))
+          builder.bold(r)
+          builder.center(r)
+        })
+
+      return builder.execute(this.core, this.spreadsheetId)
+    })
+  }
+
+  /**
    * Creates an attendance list for the week that begins with Monday
    * `monday`
    */
@@ -71,8 +120,8 @@ export class Attendance extends Spreadsheet {
     const values = Array.apply(null, Array(height)).map(() =>
       Array(width).fill('')
     )
-    const merges: CellRange[] = []
-    const bolds: CellRange[] = []
+    const merges: GridRange[] = []
+    const bolds: GridRange[] = []
     const trainingRanges: TrainingRange[] = []
 
     const row = { AM: 10, PM: 50 }
@@ -90,20 +139,21 @@ export class Attendance extends Spreadsheet {
         values[y + 2][x + 2] = 'Boat'
 
         // merge training day cells
-        merges.push({ x1: x, x2: x + 3, y1: y, y2: y + 1 })
+        merges.push(new GridRange({ x1: x, x2: x + 3, y1: y, y2: y + 1 }))
         // merge training date cells
-        merges.push({ x1: x, x2: x + 3, y1: y + 1, y2: y + 2 })
+        merges.push(new GridRange({ x1: x, x2: x + 3, y1: y + 1, y2: y + 2 }))
 
         // bold "Name", "Remarks", "Boat"
-        bolds.push({ x1: x, x2: x + 3, y1: y + 2, y2: y + 3 })
+        bolds.push(new GridRange({ x1: x, x2: x + 3, y1: y + 2, y2: y + 3 }))
 
         trainingRanges.push({
           date: monday.incrementDay(idx),
           session,
-          range:
+          range: new GridRange(
             session === 'AM'
               ? { x1: x, x2: x + 3, y1: row.AM + 3, y2: row.PM - 1 }
-              : { x1: x, x2: x + 3, y1: row.PM + 3, y2: height - 1 },
+              : { x1: x, x2: x + 3, y1: row.PM + 3, y2: height - 1 }
+          ),
         })
       })
 
@@ -123,18 +173,25 @@ export class Attendance extends Spreadsheet {
       )
       .then(async (sheetId) => {
         const builder = new Builder(sheetId)
-        merges.forEach((r) => builder.mergeBoldCenter(r))
+        merges.forEach((r) => {
+          builder.merge(r)
+          builder.bold(r)
+          builder.center(r)
+        })
         bolds.forEach((r) => builder.bold(r))
         trainingRanges.forEach((r) => {
           builder.name(r)
           builder.color(r)
-          builder.allBorder(r)
+          builder.allBorder(r.range.shift({ y1: -3 }))
           builder.validateNicknames(r, this.teamData)
         })
-        builder.loadTemplate(templateId, { x1: 0, x2: 21, y1: 0, y2: 10 })
+        builder.loadTemplate(
+          templateId,
+          new GridRange({ x1: 0, x2: 21, y1: 0, y2: 10 })
+        )
         builder.lockColumn(this.serviceEmail, width - 1)
         builder.lockRows(this.serviceEmail, [row.AM, row.PM], 3)
-        return builder.build(this.core, this.spreadsheetId)
+        return builder.execute(this.core, this.spreadsheetId)
       })
       .then(() => this.setPosition(monday))
   }
@@ -206,18 +263,22 @@ export class Attendance extends Spreadsheet {
     const attId = att.properties?.sheetId
     const targetIndex = target.properties?.index
     if (!attId || !targetIndex) return
-    return this.moveSheetById(attId, targetIndex + 1)
+    const builder = new Builder(attId)
+    builder.moveToIndex(targetIndex + 1)
+    return builder.execute(this.core, this.spreadsheetId)
   }
 
   /**
-   * Formats the template
+   * Populates the attendance sheet with some data
+   * @param data should be an array of [<name>, <remarks>, <boat>]
+   * elements. Use `null` to skip a cell.
    */
-  async formatTemplate() {
-    return this.getSheetId(this.TEMPLATE_TITLE).then((sheetId) => {
-      const builder = new Builder(sheetId)
-      builder.lockColumn(this.serviceEmail, 21)
-      builder.lockRows(this.serviceEmail, [10])
-      return builder.build(this.core, this.spreadsheetId)
+  async __mockData__(date: Date2, data: (string | null)[][]) {
+    return this.core.spreadsheets.values.update({
+      spreadsheetId: this.spreadsheetId,
+      valueInputOption: 'RAW',
+      range: namedRange(date, 'AM'),
+      requestBody: { values: data },
     })
   }
 }
