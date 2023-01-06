@@ -59,29 +59,7 @@ class SpreadsheetById {
   async listNamedRanges() {
     return this.core.spreadsheets
       .get({ spreadsheetId: this.spreadsheetId })
-      .then((s) => {
-        return s.data.namedRanges || []
-      })
-  }
-
-  /**
-   * Deletes all named ranges.
-   */
-  async clearNamedRanges() {
-    return this.listNamedRanges().then((namedRanges) =>
-      namedRanges.length > 0
-        ? this.core.spreadsheets.batchUpdate({
-            spreadsheetId: this.spreadsheetId,
-            requestBody: {
-              requests: namedRanges.map(
-                (r): sheets_v4.Schema$Request => ({
-                  deleteNamedRange: { namedRangeId: r.namedRangeId },
-                })
-              ),
-            },
-          })
-        : null
-    )
+      .then((s) => s.data.namedRanges || [])
   }
 
   /**
@@ -190,7 +168,7 @@ export class Spreadsheet extends SpreadsheetById {
   /**
    * Authenticate with Google Sheets API and initialize `Spreadsheet`
    */
-  public static async init(spreadsheetId?: string): Promise<Spreadsheet> {
+  public static async _init(spreadsheetId?: string): Promise<Spreadsheet> {
     const id = spreadsheetId ? spreadsheetId : SPREADSHEET_IDS.main
     return initCore().then((core) => new Spreadsheet(core, id))
   }
@@ -380,8 +358,8 @@ export class Spreadsheet extends SpreadsheetById {
           existingRows: sheet.length,
         }
       })
-      .then(({ values, existingRows }) =>
-        this.core.spreadsheets.values
+      .then(async ({ values, existingRows }) => {
+        return this.core.spreadsheets.values
           .append({
             spreadsheetId: this.spreadsheetId,
             valueInputOption: 'RAW',
@@ -390,7 +368,7 @@ export class Spreadsheet extends SpreadsheetById {
           })
           .then(() => values.length + existingRows)
           .catch(() => existingRows)
-      )
+      })
   }
 
   /**

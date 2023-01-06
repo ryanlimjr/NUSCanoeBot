@@ -3,22 +3,35 @@ import { Spreadsheet, SPREADSHEET_IDS, initCore } from './base'
 import { AttendanceEntry, validate } from '../types'
 import { camelCaseify } from '../string'
 import { Date2 } from '../date'
+import { Attendance } from './attendance'
 
 /**
  * Builds on top of the `Spreadsheet` class to form an ergonomic
  * builder for the weekly attendance sheet.
  */
 export class MasterAttendance extends Spreadsheet {
-  constructor(core: sheets_v4.Sheets, spreadsheetId: string) {
+  private attendanceSpreadsheet: Attendance
+
+  constructor(
+    core: sheets_v4.Sheets,
+    spreadsheetId: string,
+    attendanceSpreadsheet: Attendance
+  ) {
     super(core, spreadsheetId)
+    this.attendanceSpreadsheet = attendanceSpreadsheet
   }
 
   /**
    * Authenticate with Google Sheets API and initialize `MasterAttendance`
    */
-  public static async init(spreadsheetId?: string): Promise<MasterAttendance> {
+  public static async init(
+    attendanceSpreadsheet: Attendance,
+    spreadsheetId?: string
+  ): Promise<MasterAttendance> {
     const id = spreadsheetId ? spreadsheetId : SPREADSHEET_IDS.main
-    return initCore().then((core) => new MasterAttendance(core, id))
+    return initCore().then(
+      (core) => new MasterAttendance(core, id, attendanceSpreadsheet)
+    )
   }
 
   private title = 'Master Attendance'
@@ -138,9 +151,13 @@ export class MasterAttendance extends Spreadsheet {
    * Update attendance of the week starting with `monday`. All
    * previously existing entries from that week will be deleted.
    */
-  async updateAttendance(monday: Date2, entries: AttendanceEntry[]) {
-    return this.removeOldEntries(monday)
-      .then(() => this.appendRows(this.title, entries))
+  async updateAttendance(monday: Date2) {
+    const getEntries = this.attendanceSpreadsheet.getAttendance(monday)
+    const removeOld = this.removeOldEntries(monday)
+    return Promise.all([getEntries, removeOld])
+      .then(([[entries, _err]]) => {
+        return this.appendRows(this.title, entries)
+      })
       .then((rows) => {
         if (rows > 1) {
           return this.sanitize().catch((e) => console.log(e.message))

@@ -45,6 +45,15 @@ export class Date2 {
     return this.d.getUTCDay() === 1
   }
 
+  /**
+   * Assert if it's a monday.
+   */
+  assertMonday() {
+    if (!this.isMonday()) {
+      throw new Error(`${this} should be a Monday.`)
+    }
+  }
+
   day() {
     return this.d.getUTCDay()
   }

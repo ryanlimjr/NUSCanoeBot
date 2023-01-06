@@ -42,11 +42,14 @@ async function main() {
     .then((res) => res.getTeamData())
     .catch(() => [])
 
+  // initialize attendance sheet
+  const attendance = await Attendance.init(teamData)
+
   // initialize master attendance sheet
   const masterAtt = await MasterAttendance.init(
+    attendance,
     '15asIgRPXHeyz_FY_tq9X7tw5yeXReNTojuItpEmukwA'
   )
-  // masterAtt.create().catch(errMsg)
 
   const dates = [
     Date2.from(2023, 1, 2),
@@ -55,17 +58,10 @@ async function main() {
     Date2.from(2023, 1, 23),
   ]
 
-  // create attendance (currently hard-coded with some real life data)
-  const attendance = await Attendance.init()
-
-  // await attendance.deleteSheet(attendanceSheetTitle(dates[0]))
-  // await attendance.deleteSheet(attendanceSheetTitle(dates[1]))
-  // await attendance.createWeek(dates[0], teamData).catch(errMsg)
-  // await attendance.createWeek(dates[1], teamData).catch(errMsg)
-  // await attendance.createWeek(dates[2], teamData).catch(errMsg)
-  await attendance.deleteSheet(attendanceSheetTitle(dates[3]))
-  await attendance.createWeek(dates[3], teamData).catch(errMsg)
-  await attendance.formatTemplate()
+  // await attendance.deleteWeek(dates[3])
+  // await attendance.createWeek(dates[3]).catch(errMsg)
+  masterAtt.updateAttendance(dates[0]);
+  // masterAtt.updateAttendance(dates[3]);
 
   console.log('DONE')
 }

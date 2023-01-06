@@ -34,8 +34,15 @@ const trainingDays: { day: DayOfWeek; session: Session }[] = [
  * builder for the weekly attendance sheet.
  */
 export class Attendance extends Spreadsheet {
-  constructor(core: sheets_v4.Sheets, spreadsheetId: string) {
+  private teamData: TeamMember[]
+
+  constructor(
+    core: sheets_v4.Sheets,
+    spreadsheetId: string,
+    teamData: TeamMember[]
+  ) {
     super(core, spreadsheetId)
+    this.teamData = teamData
   }
 
   private TEMPLATE_TITLE = 'Attendance'
@@ -43,16 +50,20 @@ export class Attendance extends Spreadsheet {
   /**
    * Authenticate with Google Sheets API and initialize `Attendance`
    */
-  public static async init(spreadsheetId?: string): Promise<Attendance> {
+  public static async init(
+    teamData: TeamMember[],
+    spreadsheetId?: string
+  ): Promise<Attendance> {
     const id = spreadsheetId ? spreadsheetId : SPREADSHEET_IDS.main
-    return initCore().then((core) => new Attendance(core, id))
+    return initCore().then((core) => new Attendance(core, id, teamData))
   }
 
   /**
    * Creates an attendance list for the week that begins with Monday
    * `monday`
    */
-  async createWeek(monday: Date2, team: TeamMember[]) {
+  async createWeek(monday: Date2) {
+    monday.assertMonday()
     const title = attendanceSheetTitle(monday)
     const height = 90
     const width = 22
@@ -118,7 +129,7 @@ export class Attendance extends Spreadsheet {
           builder.name(r)
           builder.color(r)
           builder.allBorder(r)
-          builder.validateNicknames(r, team)
+          builder.validateNicknames(r, this.teamData)
         })
         builder.loadTemplate(templateId, { x1: 0, x2: 21, y1: 0, y2: 10 })
         builder.lockColumn(this.serviceEmail, width - 1)
@@ -129,15 +140,18 @@ export class Attendance extends Spreadsheet {
   }
 
   /**
+   * Deletes an attendance sheet by week.
+   */
+  async deleteWeek(monday: Date2) {
+    monday.assertMonday()
+    return this.deleteSheet(attendanceSheetTitle(monday))
+  }
+
+  /**
    * Get attendance of the week that starts with the Monday `monday`
    */
-  async getAttendance(
-    monday: Date2,
-    team: TeamMember[]
-  ): Promise<[AttendanceEntry[], string[]]> {
-    if (!monday.isMonday()) {
-      throw new Error(`${monday} should be a Monday.`)
-    }
+  async getAttendance(monday: Date2): Promise<[AttendanceEntry[], string[]]> {
+    monday.assertMonday()
     return this.core.spreadsheets.values
       .batchGet({
         spreadsheetId: this.spreadsheetId,
@@ -161,7 +175,7 @@ export class Attendance extends Spreadsheet {
             .filter((row) => row.length > 0)
             .forEach((row) => {
               const [nickname, remarks, boat] = row.map((v) => `${v}`.trim())
-              const member = team.find((v) => v.nickname === nickname)
+              const member = this.teamData.find((v) => v.nickname === nickname)
               if (!member) {
                 errors.push(
                   `Member "${nickname}" not found: ${JSON.stringify(row)}`

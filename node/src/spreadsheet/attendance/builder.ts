@@ -202,6 +202,35 @@ export class Builder {
   }
 
   /**
+   * Delete all named ranges. Note that if a named range exists but
+   * is an invalid reference (points to a deleted sheet), then that
+   * named range will not be deleted. This is a limitation of Google
+   * Sheets API.
+   */
+  async deleteNamedRange(namedRangeId: string) {
+    this.requests.push({ deleteNamedRange: { namedRangeId } })
+  }
+
+  /**
+   * Delete rows from startIndex (inclusive) to endIndex (exclusive)
+   * deleteRows(1, 4) will delete the visual rows 2, 3, and 4. (Google
+   * Sheets' GUI is 1-indexed)
+   */
+  async deleteRows(startIndex: number, endIndex: number) {
+    if (startIndex >= endIndex) return
+    this.requests.push({
+      deleteDimension: {
+        range: {
+          sheetId: this.sheetId,
+          dimension: 'ROWS',
+          startIndex,
+          endIndex,
+        },
+      },
+    })
+  }
+
+  /**
    * Build it and ship it.
    */
   async build(core: sheets_v4.Sheets, spreadsheetId: string) {
