@@ -257,13 +257,14 @@ export class Spreadsheet {
   /**
    * Get all developer metadata
    */
-  async listSpreadsheetMetadata() {
+  async getSpreadsheetMetadata(p?: { onlyMetadata: boolean }) {
     return this.core.spreadsheets
-      .get({
-        spreadsheetId: this.spreadsheetId,
-      })
+      .get({ spreadsheetId: this.spreadsheetId })
       .then((ss) => {
         const sheets = ss.data.sheets || []
+        if (p?.onlyMetadata) {
+          return sheets.map((v) => v.developerMetadata).filter(Boolean)
+        }
         return sheets.map((v) => ({
           title: v.properties?.title,
           sheetId: v.properties?.sheetId,
@@ -278,27 +279,27 @@ export class Spreadsheet {
    *
    * Returns number of rows in the sheet
    */
-  async appendRows(title: string, data: Record<string, any>[]) {
-    return this.getSheet(title)
-      .then((raw) => {
+  async appendRows(
+    title: string,
+    data: Record<string, any>[],
+    headers?: string[]
+  ) {
+    if (!headers) {
+      headers = await this.getSheet(title).then((raw) => {
         const sheet = raw.data.values || []
-        const headers = sheet[0].map((v) => camelCaseify(`${v}`))
-        return {
-          values: data.map((row) => headers.map((key) => row[key])),
-          existingRows: sheet.length,
-        }
+        if (sheet.length === 0) throw new Error(`Sheet ${title} has no headers`)
+        return sheet[0]
       })
-      .then(async ({ values, existingRows }) => {
-        return this.core.spreadsheets.values
-          .append({
-            spreadsheetId: this.spreadsheetId,
-            valueInputOption: 'RAW',
-            range: title,
-            requestBody: { majorDimension: 'ROWS', values },
-          })
-          .then(() => values.length + existingRows)
-          .catch(() => existingRows)
-      })
+    }
+    if (!headers) throw new Error('Unable to fetch headers')
+    const keys = (headers || []).map(camelCaseify)
+    const values = data.map((row) => keys.map((key) => row[key]))
+    return this.core.spreadsheets.values.append({
+      spreadsheetId: this.spreadsheetId,
+      valueInputOption: 'RAW',
+      range: title,
+      requestBody: { majorDimension: 'ROWS', values },
+    })
   }
 
   /**

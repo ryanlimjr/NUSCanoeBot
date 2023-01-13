@@ -10,40 +10,47 @@ import { Spreadsheet, SPREADSHEET_IDS, initCore } from './base'
  * builder for the weekly attendance sheet.
  */
 export class TeamData extends Spreadsheet {
-  constructor(core: sheets_v4.Sheets, spreadsheetId: string) {
+  private title: string
+  private headers = ['Nickname', 'Full Name', 'Birthday', 'Shirt Size']
+
+  constructor(core: sheets_v4.Sheets, spreadsheetId: string, title: string) {
     super(core, spreadsheetId)
+    this.title = title
   }
 
   /**
    * Authenticate with Google Sheets API and initialize `TeamData`
    */
-  public static async init(spreadsheetId?: string): Promise<TeamData> {
+  public static async init(
+    spreadsheetId?: string,
+    title = 'Team Data'
+  ): Promise<TeamData> {
     const id = spreadsheetId ? spreadsheetId : SPREADSHEET_IDS.main
-    return initCore().then((core) => new TeamData(core, id))
+    return initCore().then((core) => new TeamData(core, id, title))
   }
-
-  private title = 'Team Data'
 
   /**
    * Initializes the team's data store
    */
-  async createDatabase(headers: string[]) {
+  async createDatabase() {
     const metadata = { type: 'teamData' }
-    return this.addSheet(this.title, 2, headers.length, metadata)
+    return this.addSheet(this.title, 2, this.headers.length, metadata)
+      .then((id) =>
+        this.core.spreadsheets.values
+          .update({
+            spreadsheetId: this.spreadsheetId,
+            range: this.title,
+            valueInputOption: 'RAW',
+            requestBody: { values: [this.headers] },
+          })
+          .then(() => id)
+      )
       .then((id) => {
         const builder = new Builder(id)
-        builder.moveToIndex(2)
-        builder.setDateColumn(2)
+        builder.moveToIndex(1)
+        builder.setDateColumn(2, 'dd/mm/yyyy')
         return builder.execute(this.core, this.spreadsheetId)
       })
-      .then(() =>
-        this.core.spreadsheets.values.update({
-          spreadsheetId: this.spreadsheetId,
-          range: this.title,
-          valueInputOption: 'RAW',
-          requestBody: { values: [headers] },
-        })
-      )
   }
 
   /**
@@ -87,5 +94,12 @@ export class TeamData extends Spreadsheet {
       })
       return result
     })
+  }
+
+  /**
+   * Write member data to Team Data
+   */
+  async appendTeamData(data: TeamMember[]) {
+    return this.appendRows(this.title, data, this.headers)
   }
 }

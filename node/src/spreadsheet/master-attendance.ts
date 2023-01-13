@@ -164,10 +164,6 @@ export class MasterAttendance extends Spreadsheet {
       .then(([[entries, _err]]) => {
         return this.appendRows(this.title, entries)
       })
-      .then((rows) => {
-        if (rows > 1) {
-          return this.sanitize().catch((e) => console.log(e.message))
-        }
-      })
+      .then(() => this.sanitize().catch((e) => console.log(e.message)))
   }
 }

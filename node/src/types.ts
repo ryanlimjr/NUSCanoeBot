@@ -24,7 +24,8 @@ export type Training = {
 export type TeamMember = {
   nickname: string
   fullName: string
-  birthday?: string
+  /** excel serial number */
+  birthday?: number
   shirtSize?: string
 }
 

@@ -173,6 +173,7 @@ export class Attendance extends Spreadsheet {
       )
       .then(async (sheetId) => {
         const builder = new Builder(sheetId)
+        builder.setDimensionSize('ROWS', 9, 32)
         merges.forEach((r) => {
           builder.merge(r)
           builder.bold(r)
@@ -273,11 +274,11 @@ export class Attendance extends Spreadsheet {
    * @param data should be an array of [<name>, <remarks>, <boat>]
    * elements. Use `null` to skip a cell.
    */
-  async __mockData__(date: Date2, data: (string | null)[][]) {
+  async __mockData__(date: Date2, session: Session, data: (string | null)[][]) {
     return this.core.spreadsheets.values.update({
       spreadsheetId: this.spreadsheetId,
       valueInputOption: 'RAW',
-      range: namedRange(date, 'AM'),
+      range: namedRange(date, session),
       requestBody: { values: data },
     })
   }

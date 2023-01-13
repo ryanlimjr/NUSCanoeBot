@@ -13,8 +13,8 @@ export type TrainingRange = {
  * A helper class to build a weekly attendance list.
  */
 export class Builder {
-  requests: sheets_v4.Schema$Request[]
-  sheetId: number
+  private requests: sheets_v4.Schema$Request[]
+  private sheetId: number
 
   constructor(sheetId: number) {
     this.sheetId = sheetId
@@ -268,8 +268,7 @@ export class Builder {
   }
 
   /**
-   * Moves sheet with ID of `sheetId` to index `index`. Use an index
-   * of 1 to move it to the front.
+   * Moves to index `index`. Use an index of 1 to move it to the front.
    */
   moveToIndex(index: number) {
     this.requests.push({
