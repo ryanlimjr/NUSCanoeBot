@@ -10,7 +10,8 @@ export type TrainingRange = {
 }
 
 /**
- * A helper class to build a weekly attendance list.
+ * A helper class that incrementally builds a batch of requests that
+ * can be executed in one API call. Order matters.
  */
 export class Builder {
   private requests: sheets_v4.Schema$Request[]

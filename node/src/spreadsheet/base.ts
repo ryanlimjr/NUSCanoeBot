@@ -1,11 +1,12 @@
 import { auth, sheets, sheets_v4 } from '@googleapis/sheets'
 import { camelCaseify, envOrThrow } from '../string'
-import { config } from 'dotenv'
+import { config as load_dotenv } from 'dotenv'
 
 export const SPREADSHEET_IDS = {
   main: '1FGaXn4gvXpr6E-b4JO4O2pZk43jHpxvZHPJtN5SJc88',
 }
-config()
+
+load_dotenv()
 const credentials = {
   private_key: envOrThrow('GOOGLE_PRIVATE_KEY'),
   client_email: envOrThrow('GOOGLE_CLIENT_EMAIL'),
@@ -13,16 +14,11 @@ const credentials = {
 
 /**
  * Authenticate and initialize a working Sheets instance.
- * Call with no options to use the default values.
- *
- * @param keyFile Path to a .json, .pem, or .p12 key file
- * @param spreadsheetId ID of the main spreadsheet
  */
 export async function initCore(): Promise<sheets_v4.Sheets> {
-  // authenticate and get client
   const scopes = ['https://www.googleapis.com/auth/spreadsheets']
   return auth
-    .getClient({ scopes, credentials })
+    .getClient({ scopes, credentials }) // authenticate and get client
     .then((auth) => sheets({ version: 'v4', auth }))
 }
 
@@ -45,7 +41,8 @@ export class Spreadsheet {
   /**
    * List all sheets under the spreadsheet
    */
-  async listSheets() {
+  async listSheets(cache?: sheets_v4.Schema$Sheet[]) {
+    if (cache && cache.length > 0) return cache
     return this.core.spreadsheets
       .get({ spreadsheetId: this.spreadsheetId })
       .then((s) => s.data.sheets || [])
@@ -94,14 +91,6 @@ export class Spreadsheet {
   }
 
   /**
-   * Authenticate with Google Sheets API and initialize `Spreadsheet`
-   */
-  public static async _init(spreadsheetId?: string): Promise<Spreadsheet> {
-    const id = spreadsheetId ? spreadsheetId : SPREADSHEET_IDS.main
-    return initCore().then((core) => new Spreadsheet(core, id))
-  }
-
-  /**
    * Gets a raw sheet.
    */
   protected getSheet(title: string, range?: string) {
@@ -138,21 +127,15 @@ export class Spreadsheet {
    */
   protected async getSheetId(
     title: string,
-    sheets?: sheets_v4.Schema$Sheet[]
+    cache?: sheets_v4.Schema$Sheet[]
   ): Promise<number> {
-    const getSheets: Promise<sheets_v4.Schema$Sheet[]> = sheets
-      ? new Promise((res) => res(sheets))
-      : this.listSheets()
-    return getSheets
+    return this.listSheets(cache)
       .then((sheets) => sheets.find((s) => s.properties?.title === title))
-      .then(
-        (sheet) =>
-          new Promise((res, rej) =>
-            sheet?.properties?.sheetId
-              ? res(sheet.properties.sheetId)
-              : rej(`Sheet not found: ${title}`)
-          )
-      )
+      .then((sheet) => {
+        const sheetId = sheet?.properties?.sheetId
+        if (!sheetId) throw new Error(`Sheet not found: ${title}`)
+        return sheetId
+      })
   }
 
   /**

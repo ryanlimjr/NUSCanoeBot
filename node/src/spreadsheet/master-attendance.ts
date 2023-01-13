@@ -89,10 +89,18 @@ export class MasterAttendance extends Spreadsheet {
   }
 
   /**
-   * Cleans up the database without changing its data.
+   * Cleans up the database without changing its data. Critically, it
+   * sorts all entries by date. This is required for quick deletion of
+   * data.
    */
   async sanitize() {
     // TODO: use builder here
+    // tasks:
+    // 1. set date formatting for the 'Date' column
+    // 2. sort by nicknames first, and then by date.
+    //
+    // /** previous code */
+    //
     // const dateCol = this.headers.indexOf('Date')
     // return this.setDateColumn(this.title, this.headers.indexOf('Date'))
     //   .then(() => this.getSheetId(this.title))
@@ -143,10 +151,10 @@ export class MasterAttendance extends Spreadsheet {
    * `monday`
    */
   async removeOldEntries(monday: Date2) {
-    return Promise.all([
-      this.getCurrent(monday),
-      this.getSheetId(this.title),
-    ]).then(([[start, end], id]) => {
+    const rowRange = this.getCurrent(monday)
+    const sheetId = this.getSheetId(this.title)
+    return Promise.all([rowRange, sheetId]).then(([rowRange, id]) => {
+      const [start, end] = rowRange
       const builder = new Builder(id)
       builder.deleteRows(start, end)
       return builder.execute(this.core, this.spreadsheetId)

@@ -30,7 +30,8 @@ export class TeamData extends Spreadsheet {
   }
 
   /**
-   * Initializes the team's data store
+   * Initializes the team's data store. This creates the sheet and
+   * sets its metadata, and also sets the column headers.
    */
   async createDatabase() {
     const metadata = { type: 'teamData' }
@@ -54,7 +55,10 @@ export class TeamData extends Spreadsheet {
   }
 
   /**
-   * Sanitizes the team's data store.
+   * Sanitizes the team's data store. Currently this just formats the
+   * 'Birthday' column to show dates nicely.
+   *
+   * TODO: check for nickname collisions, trim start/end whitespaces
    */
   async sanitize() {
     const getSheet = this.getSheet(this.title)
@@ -76,19 +80,21 @@ export class TeamData extends Spreadsheet {
     return this.getSheet(this.title).then((res) => {
       const result: TeamMember[] = []
       if (!res.data.values) return result
+
       const firstRow = res.data.values.shift()
       if (!firstRow) return result
-      const keys = firstRow.map(camelCaseify)
+      const headers = firstRow.map(camelCaseify)
 
       res.data.values.forEach((row) => {
         const member = {} as Record<string, any>
-        keys.forEach((key, idx) => {
+        headers.forEach((header, idx) => {
           // parse birthdays differently
-          if (key === 'birthday' && row[idx]) {
-            member[key] = Date2.fromExcelSerialNumber(row[idx]).toDDMMYYYY()
+          if (header === 'birthday' && row[idx]) {
+            const date = Date2.fromExcelSerialNumber(row[idx]).toDDMMYYYY()
+            member[header] = date
             return
           }
-          member[key] = row[idx]
+          member[header] = row[idx]
         })
         result.push(validate.teamMember(member))
       })

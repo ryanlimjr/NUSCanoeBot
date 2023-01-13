@@ -1,5 +1,23 @@
 import { months } from './types'
 
+const MILLISECONDS_IN_A_DAY = 86400000
+
+/**
+ * This offset is a result of JavaScript epoch being 1 Jan 1970 but
+ * Excel/Google Sheets have this convention of sticking to 1 Jan 1900
+ */
+const EXCEL_DAY_OFFSET = 25569
+
+/**
+ * Naive check to validate a date.
+ */
+function validDate(month: number, day: number): boolean {
+  if (!Number.isInteger(month) || !Number.isInteger(day)) return false
+  if (month < 1 || 12 < month || day < 1) return false
+  if (month === 2) return day === 28 || day === 29
+  return day <= [0, 31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month]
+}
+
 /**
  * Anti-timezone date class.
  */
@@ -14,8 +32,8 @@ export class Date2 {
    * Creates a new Date2 instance
    */
   static from(year: number, month: number, day: number) {
-    if (!(1 <= month && month <= 12)) {
-      throw new Error('Date2.from() expects a month between [1, 12]')
+    if (!validDate(month, day)) {
+      throw new Error(`Invalid date: ${JSON.stringify({ year, month, day })}`)
     }
     const d = new Date(`${day} ${months[month - 1]}, ${year} GMT`)
     return new Date2(d.getTime())
@@ -28,14 +46,14 @@ export class Date2 {
     if (sn % 1 !== 0) {
       throw new Error('fromExcelSerialNumber() requires an integer parameter.')
     }
-    return new Date2((sn - 25569) * 86400000)
+    return new Date2((sn - EXCEL_DAY_OFFSET) * MILLISECONDS_IN_A_DAY)
   }
 
   /**
    * Converts a date to an excel serial number.
    */
   toExcelSerialNumber() {
-    return this.d.getTime() / 86400000 + 25569
+    return this.d.getTime() / MILLISECONDS_IN_A_DAY + EXCEL_DAY_OFFSET
   }
 
   /**
@@ -46,7 +64,7 @@ export class Date2 {
   }
 
   /**
-   * Assert if it's a monday.
+   * Assert if it's a monday. Throws if it's not.
    */
   assertMonday() {
     if (!this.isMonday()) {
@@ -90,6 +108,6 @@ export class Date2 {
    * Creates a new Date2 instance that is `days` ahead.
    */
   incrementDay(days: number): Date2 {
-    return new Date2(this.d.getTime() + days * 86400000)
+    return new Date2(this.d.getTime() + days * MILLISECONDS_IN_A_DAY)
   }
 }

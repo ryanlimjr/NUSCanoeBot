@@ -8,7 +8,7 @@ const TEST_IDS = {
   backend: '1_DaCSoXgTDFIaitcRtBgmYcVFvJcXtbeRrM_NTy2ZHY',
 }
 
-test.only('end-to-end test', async () => {
+test('end-to-end test', async () => {
   /**
    * Initialize team database. This is where members key in their
    * nickname, full name, and other personal particulars
@@ -17,7 +17,7 @@ test.only('end-to-end test', async () => {
    * correctness, this has to be set up first.
    */
   const ss = await TeamData.init(TEST_IDS.main)
-  await ss.resetSpreadsheet() //clear old runs
+  await ss.resetSpreadsheet() // clear old runs
 
   await ss.createDatabase()
   await ss.appendTeamData([
@@ -96,11 +96,23 @@ test.only('end-to-end test', async () => {
   await Promise.all(promises)
 
   const [entries, errors] = await att.getAttendance(Date2.from(2023, 1, 2))
-  // let meta = await att
-  //   .getSpreadsheetMetadata()
-  //   .then((s) => s.map((v) => v.metadata))
-  // expect(meta).toHaveMetadata('type', 'attendance')
-  // expect(meta).toHaveMetadata('type', 'teamData')
+
+  /**
+   * Assert that the new attendance sheet was created with correct metadata
+   */
+  expect(att.getSpreadsheetMetadata()).resolves.toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        title: 'Jan 2 - Jan 8',
+        metadata: expect.arrayContaining([
+          expect.objectContaining({
+            metadataKey: 'type',
+            metadataValue: 'attendance',
+          }),
+        ]),
+      }),
+    ])
+  )
 
   expect(errors).toHaveLength(0)
   expect(entries).toIncludeSameMembers([
