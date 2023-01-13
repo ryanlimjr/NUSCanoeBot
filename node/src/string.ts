@@ -2,6 +2,16 @@ import { Date2 } from './date'
 import { DayOfWeek, daysOfWeek, Session } from './types'
 
 /**
+ * Retrieves an environment variable and throws if not found.
+ */
+export function envOrThrow(env: string): string {
+  const value = process.env[env]
+  if (value == undefined)
+    throw new Error(`Environment variable expected but not found: ${env}`)
+  return value
+}
+
+/**
  * returns a new string that is the camelCase of the old string.
  */
 export function camelCaseify(v: string) {

@@ -2,3 +2,4 @@
 node_modules
 dist
 google-credentials.json
+.env

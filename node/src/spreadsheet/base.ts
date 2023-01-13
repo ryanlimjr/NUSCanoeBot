@@ -1,12 +1,14 @@
 import { auth, sheets, sheets_v4 } from '@googleapis/sheets'
-import { join } from 'path'
-import { camelCaseify } from '../string'
+import { camelCaseify, envOrThrow } from '../string'
+import { config } from 'dotenv'
 
-export const CREDENTIALS_PATH = join(process.cwd(), 'google-credentials.json')
-export const SERVICE_EMAIL =
-  'nus-canoe-service-account@nus-canoe.iam.gserviceaccount.com'
 export const SPREADSHEET_IDS = {
   main: '1FGaXn4gvXpr6E-b4JO4O2pZk43jHpxvZHPJtN5SJc88',
+}
+config()
+const credentials = {
+  private_key: envOrThrow('GOOGLE_PRIVATE_KEY'),
+  client_email: envOrThrow('GOOGLE_CLIENT_EMAIL'),
 }
 
 /**
@@ -16,13 +18,11 @@ export const SPREADSHEET_IDS = {
  * @param keyFile Path to a .json, .pem, or .p12 key file
  * @param spreadsheetId ID of the main spreadsheet
  */
-export async function initCore(keyFile?: string): Promise<sheets_v4.Sheets> {
-  // fill in default values
-  keyFile = keyFile ? keyFile : CREDENTIALS_PATH
+export async function initCore(): Promise<sheets_v4.Sheets> {
   // authenticate and get client
   const scopes = ['https://www.googleapis.com/auth/spreadsheets']
   return auth
-    .getClient({ keyFile, scopes })
+    .getClient({ scopes, credentials })
     .then((auth) => sheets({ version: 'v4', auth }))
 }
 
@@ -32,7 +32,7 @@ export async function initCore(keyFile?: string): Promise<sheets_v4.Sheets> {
 export class Spreadsheet {
   protected core: sheets_v4.Sheets
   protected spreadsheetId: string
-  protected serviceEmail = SERVICE_EMAIL
+  protected serviceEmail = credentials.client_email
 
   /**
    * Initialize a new Sheets instance

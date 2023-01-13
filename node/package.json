@@ -15,7 +15,8 @@
     "typescript": "^4.9.4"
   },
   "dependencies": {
-    "@googleapis/sheets": "^4.0.1"
+    "@googleapis/sheets": "^4.0.1",
+    "dotenv": "^16.0.3"
   },
   "prettier": {
     "tabWidth": 2,
