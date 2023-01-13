@@ -1,7 +1,6 @@
 from datetime import date, timedelta
 import calendar
 
-
 def getDayInt(day: date) -> int:
     """Converts day in date type to integer representation of the day of the week
 
@@ -23,8 +22,7 @@ def getTodayInt() -> int:
     today = date.today()
     return getDayInt(today)
 
-
-def getWeek(day: date) -> str:
+def getWeek(day:date ) -> str:
     """Gets the week in MMM DD/MM - MMM DD/MM format based on the day input
 
     Args:
@@ -35,13 +33,8 @@ def getWeek(day: date) -> str:
     """
     startOfWeek = day - timedelta(days=getDayInt(day))
     endOfWeek = startOfWeek + timedelta(days=6)
-    Week = (
-        startOfWeek.strftime("%b %02d/%02m")
-        + " - "
-        + endOfWeek.strftime("%b %02d/%02m")
-    )
+    Week = startOfWeek.strftime('%b %02d/%02m') + " - " + endOfWeek.strftime('%b %02d/%02m')
     return Week
-
 
 def getCurrentWeek() -> str:
     """Gets the current week in MMM DD/MM - MMM DD/MM format
@@ -52,7 +45,6 @@ def getCurrentWeek() -> str:
     today = date.today()
     return getWeek(today)
 
-
 def getAllWeeksInPrevMonth() -> list:
     """Gets a list of all the weeks in the month
 
@@ -60,13 +52,13 @@ def getAllWeeksInPrevMonth() -> list:
         list: list of weeks in the month
     """
     weeks = []
-    today = date.today()
+    today= date.today()
     first = today.replace(day=1)
     lastMonth = first - timedelta(days=1)
     lastMonthInt = lastMonth.month
     year = today.year if lastMonthInt != 12 else (today.year - 1)
-    for i in range(1, 32):
-        try:
+    for i in range(1,32):
+        try :
             day = today.replace(year=year, month=lastMonthInt, day=i)
         except ValueError:
             break
@@ -75,28 +67,24 @@ def getAllWeeksInPrevMonth() -> list:
             weeks.append(week)
     return weeks
 
-
 def getAllDatesInPrevMonth() -> list:
     """Gets a list of all the weeks in the month
 
     Returns:
         list: list of weeks in the month
     """
-    today = date.today()
+    today= date.today()
     first = today.replace(day=1)
     lastMonth = first - timedelta(days=1)
     lastMonthInt = lastMonth.month
     year = today.year if lastMonthInt != 12 else (today.year - 1)
     numDays = calendar.monthrange(year, lastMonthInt)[1]
-    days = [
-        date(year, lastMonthInt, day).strftime("%-d/%-m/%Y")
-        for day in range(1, numDays + 1)
-    ]
+    days = [date(year, lastMonthInt, day).strftime("%-d/%-m/%Y") for day in range(1, numDays+1)]
     return days
 
-
 def getPrevMonthStr() -> str:
-    today = date.today()
+    today= date.today()
     first = today.replace(day=1)
     lastMonth = first - timedelta(days=1)
-    return lastMonth.strftime("%B")
+    return lastMonth.strftime('%B')
+

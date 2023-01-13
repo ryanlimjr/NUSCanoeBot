@@ -1,7 +1,7 @@
 import os
 import json
 from dotenv import load_dotenv
-from telegram import Update, ParseMode
+from telegram import Update,ParseMode
 from telegram.ext import CallbackContext
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
@@ -11,19 +11,18 @@ import utils
 from constants import DATE_CELL_RANGE
 
 """uncomment this when testing locally"""
-# load_dotenv()
+#load_dotenv()
 
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-SERVICE_ACCOUNT_CREDS = json.loads(str(os.environ.get("GOOGLE_CREDENTIALS")))
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+SERVICE_ACCOUNT_CREDS= json.loads(str(os.environ.get("GOOGLE_CREDENTIALS")))
 SPREAD_SHEET_ID = str(os.environ.get("SHEET_ID"))
-CREDS = service_account.Credentials.from_service_account_info(
-    SERVICE_ACCOUNT_CREDS, scopes=SCOPES
-)
-SERVICE = build("sheets", "v4", credentials=CREDS)
+CREDS = service_account.Credentials.from_service_account_info( SERVICE_ACCOUNT_CREDS, scopes=SCOPES)
+SERVICE = build('sheets', 'v4', credentials=CREDS)
 SHEET = SERVICE.spreadsheets()
 
 
 class DispBoatAllocCommand:
+
     @staticmethod
     def getWorksheetName() -> str:
         """
@@ -44,18 +43,12 @@ class DispBoatAllocCommand:
         Returns:
             list: list of boat allocations column wise
         """
-        worksheet = (
-            SHEET.values()
-            .get(
-                spreadsheetId=SPREAD_SHEET_ID,
-                range=DispBoatAllocCommand.getWorksheetName(),
-                majorDimension="COLUMNS",
-            )
-            .execute()
-        )
-        rawWorksheetData = worksheet.get("values", [])
-        nameColumn = utils.getTodayInt() * 3
-        boatColumn = nameColumn + 2
+        worksheet = SHEET.values().get(spreadsheetId=SPREAD_SHEET_ID,
+            range = DispBoatAllocCommand.getWorksheetName(),
+            majorDimension = "COLUMNS").execute()
+        rawWorksheetData = worksheet.get('values', [])
+        nameColumn = utils.getTodayInt()*3
+        boatColumn = nameColumn+2
         return list(zip(rawWorksheetData[nameColumn], rawWorksheetData[boatColumn]))
 
     @staticmethod
@@ -66,7 +59,7 @@ class DispBoatAllocCommand:
             rawData (list): boat allocation in list format
 
         Returns:
-            str: boat allocation in str format in table formatting
+            str: boat allocation in str format in table formatting 
         """
         filteredData = filter(lambda x: len(x[0]) != 0 and len(x[1]) != 0, rawData)
         table = tabulate(list(filteredData), headers=["Name", "Boat"])
@@ -84,9 +77,9 @@ class DispBoatAllocCommand:
         return boatAllocation
 
     @staticmethod
-    def execute(update: Update, context: CallbackContext) -> None:
+    def execute(update: Update, context: CallbackContext ) -> None:
         """
         Sends response back to telegram user
         """
         table = DispBoatAllocCommand.getBoatAllocation()
-        update.message.reply_text(f"<pre>{table}</pre>", parse_mode=ParseMode.HTML)
+        update.message.reply_text(f'<pre>{table}</pre>', parse_mode=ParseMode.HTML)
