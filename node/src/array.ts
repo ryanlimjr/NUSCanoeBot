@@ -7,15 +7,6 @@ export function range(start: number, end: number): number[] {
 }
 
 /**
- * Throws an error if the `array` does not contain `element`
- */
-export function assertHas(array: any[], element: any) {
-  if (!array.includes(element)) {
-    throw new Error(`Array ${array} must contain ${element}`)
-  }
-}
-
-/**
  * Returns a 2D array filled with `elem`
  */
 export function grid<T>(elem: T, height: number, width: number) {
